@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { campaigns, trendData, fmt$, cpc, cpl, cps, roas, roasClass, convRate } from '@/lib/mockData';
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-} from 'recharts';
+  campaigns, trendData, totalLeads,
+  fmt$, cpc, cpl, cps, roas, roasClass, convRate,
+} from '@/lib/mockData';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   ChevronRight, TrendingUp, TrendingDown, Minus,
   Eye, MousePointerClick, Users, Trophy, DollarSign,
   Zap, Target, BarChart2, RefreshCw, Calendar,
+  FileText, Phone,
 } from 'lucide-react';
 
 // ─── KPI Card ────────────────────────────────────────────────────────────────
@@ -24,14 +26,14 @@ function KpiCard({
     deltaDir === 'down' ? TrendingDown : Minus;
 
   return (
-    <div className={`rounded-xl border border-white/8 bg-card p-4 flex flex-col gap-2 hover:border-white/15 transition-colors duration-200`}>
+    <div className="rounded-xl border border-white/8 bg-card p-4 flex flex-col gap-2 hover:border-white/15 transition-colors duration-200">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${color}`}>
           <Icon size={14} />
         </div>
       </div>
-      <div className={`kpi-value text-2xl text-foreground`}>{value}</div>
+      <div className="kpi-value text-2xl text-foreground">{value}</div>
       <div className="flex items-center gap-2 mt-auto">
         {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
         {delta && (
@@ -45,11 +47,47 @@ function KpiCard({
   );
 }
 
+// ─── GHL Lead Split Mini Card ─────────────────────────────────────────────────
+function LeadSplitCard({ formLeads, callLeads }: { formLeads: number; callLeads: number }) {
+  const total = formLeads + callLeads;
+  const formPct = total ? Math.round((formLeads / total) * 100) : 0;
+  const callPct = total ? Math.round((callLeads / total) * 100) : 0;
+  return (
+    <div className="rounded-xl border border-white/8 bg-card p-4 flex flex-col gap-3 hover:border-white/15 transition-colors duration-200">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">GHL Lead Sources</span>
+        <span className="text-[10px] text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">Source of Truth</span>
+      </div>
+      <div className="kpi-value text-2xl text-foreground">{total}</div>
+      {/* Stacked bar */}
+      <div className="h-2 rounded-full overflow-hidden flex gap-px">
+        <div className="h-full rounded-l-full bg-blue-400" style={{ width: `${formPct}%` }} />
+        <div className="h-full rounded-r-full bg-emerald-400" style={{ width: `${callPct}%` }} />
+      </div>
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <FileText size={11} className="text-blue-400" />
+          <span>Forms</span>
+          <span className="font-bold text-foreground">{formLeads}</span>
+          <span className="text-muted-foreground/60">{formPct}%</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Phone size={11} className="text-emerald-400" />
+          <span>Calls</span>
+          <span className="font-bold text-foreground">{callLeads}</span>
+          <span className="text-muted-foreground/60">{callPct}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Sparkline Card ──────────────────────────────────────────────────────────
 function SparkCard({
-  label, data, weeks, color, formatter,
+  label, data, weeks, color, formatter, badge,
 }: {
-  label: string; data: number[]; weeks: string[]; color: string; formatter?: (v: number) => string;
+  label: string; data: number[]; weeks: string[]; color: string;
+  formatter?: (v: number) => string; badge?: string;
 }) {
   const chartData = weeks.map((w, i) => ({ week: w, value: data[i] }));
   const latest = data[data.length - 1];
@@ -60,7 +98,12 @@ function SparkCard({
   return (
     <div className="rounded-xl border border-white/8 bg-card p-4 flex flex-col gap-3 hover:border-white/15 transition-colors duration-200">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-foreground">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">{label}</span>
+          {badge && (
+            <span className="text-[9px] font-semibold uppercase tracking-wider bg-white/8 text-muted-foreground px-1.5 py-0.5 rounded">{badge}</span>
+          )}
+        </div>
         {pct !== null && (
           <span className={`text-xs font-medium flex items-center gap-0.5 ${up ? 'text-emerald-400' : 'text-rose-400'}`}>
             {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
@@ -86,7 +129,7 @@ function SparkCard({
           <Tooltip
             contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
             labelStyle={{ color: '#94a3b8' }}
-            itemStyle={{ color: color }}
+            itemStyle={{ color }}
             formatter={(v: number) => [formatter ? formatter(v) : v.toLocaleString(), '']}
           />
         </AreaChart>
@@ -115,32 +158,48 @@ function StatusBadge({ status }: { status: 'active' | 'paused' | 'ended' }) {
 
 // ─── Table cell helpers ───────────────────────────────────────────────────────
 const Td = ({ children, className = '' }: { children?: React.ReactNode; className?: string }) => (
-  <td className={`px-3 py-2.5 text-sm text-slate-300 whitespace-nowrap ${className}`}>{children}</td>
+  <td className={`px-2.5 py-2.5 text-sm text-slate-300 whitespace-nowrap ${className}`}>{children}</td>
 );
 const Th = ({ children, className = '' }: { children?: React.ReactNode; className?: string }) => (
-  <th className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left whitespace-nowrap ${className}`}>{children}</th>
+  <th className={`px-2.5 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left whitespace-nowrap ${className}`}>{children}</th>
 );
+
+// ─── Lead Split Cell (forms + calls inline) ───────────────────────────────────
+function LeadCell({ formLeads, callLeads }: { formLeads: number; callLeads: number }) {
+  const total = formLeads + callLeads;
+  if (!total) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="font-bold text-cyan-400">{total}</span>
+      <div className="flex items-center gap-2 text-[10px]">
+        <span className="flex items-center gap-0.5 text-blue-400"><FileText size={9} />{formLeads}</span>
+        <span className="flex items-center gap-0.5 text-emerald-400"><Phone size={9} />{callLeads}</span>
+      </div>
+    </div>
+  );
+}
 
 // ─── Ad Row ───────────────────────────────────────────────────────────────────
 function AdRow({ ad }: { ad: import('@/lib/mockData').AdData }) {
+  const leads = totalLeads(ad.formLeads, ad.callLeads);
   return (
     <tr className="table-row-hover border-t border-white/4">
       <Td className="drill-level-2">
         <span className="text-slate-400 mr-2 text-xs">◆</span>
         <span className="text-slate-300 text-xs italic">{ad.headline}</span>
       </Td>
-      <Td />
+      <Td /><Td />
       <Td className="text-right">{ad.clicks.toLocaleString()}</Td>
       <Td className="text-right">{ad.ctr}</Td>
       <Td className="text-right">{fmt$(ad.spend)}</Td>
       <Td className="text-right">{cpc(ad.spend, ad.clicks)}</Td>
-      <Td className="text-right text-cyan-400">{ad.leads}</Td>
-      <Td className="text-right">{cpl(ad.spend, ad.leads)}</Td>
-      <Td className="text-right text-emerald-400">{ad.won}</Td>
+      <Td className="text-right"><LeadCell formLeads={ad.formLeads} callLeads={ad.callLeads} /></Td>
+      <Td className="text-right">{cpl(ad.spend, ad.formLeads, ad.callLeads)}</Td>
+      <Td className="text-right text-emerald-400">{ad.won || '—'}</Td>
       <Td className="text-right">{cps(ad.spend, ad.won)}</Td>
       <Td className="text-right">{ad.revenue > 0 ? fmt$(ad.revenue) : '—'}</Td>
       <Td className={`text-right ${roasClass(ad.revenue, ad.spend)}`}>{roas(ad.revenue, ad.spend)}</Td>
-      <Td className="text-right">{convRate(ad.leads, ad.clicks)}</Td>
+      <Td className="text-right">{convRate(leads, ad.clicks)}</Td>
     </tr>
   );
 }
@@ -148,30 +207,28 @@ function AdRow({ ad }: { ad: import('@/lib/mockData').AdData }) {
 // ─── Ad Group Row ─────────────────────────────────────────────────────────────
 function AdGroupRow({ ag }: { ag: import('@/lib/mockData').AdGroupData }) {
   const [open, setOpen] = useState(false);
+  const leads = totalLeads(ag.formLeads, ag.callLeads);
   return (
     <>
-      <tr
-        className="table-row-hover border-t border-white/5 cursor-pointer"
-        onClick={() => setOpen(o => !o)}
-      >
+      <tr className="table-row-hover border-t border-white/5 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <Td className="drill-level-1">
           <span className="inline-flex items-center gap-1.5">
             <ChevronRight size={12} className={`chevron-icon text-slate-500 ${open ? 'open' : ''}`} />
             <span className="text-slate-400 text-xs font-medium">{ag.name}</span>
           </span>
         </Td>
-        <Td />
+        <Td /><Td />
         <Td className="text-right text-slate-400">{ag.clicks.toLocaleString()}</Td>
         <Td className="text-right text-slate-400">—</Td>
         <Td className="text-right text-slate-400">{fmt$(ag.spend)}</Td>
         <Td className="text-right text-slate-400">{cpc(ag.spend, ag.clicks)}</Td>
-        <Td className="text-right text-cyan-400/80">{ag.leads}</Td>
-        <Td className="text-right text-slate-400">{cpl(ag.spend, ag.leads)}</Td>
-        <Td className="text-right text-emerald-400/80">{ag.won}</Td>
+        <Td className="text-right"><LeadCell formLeads={ag.formLeads} callLeads={ag.callLeads} /></Td>
+        <Td className="text-right text-slate-400">{cpl(ag.spend, ag.formLeads, ag.callLeads)}</Td>
+        <Td className="text-right text-emerald-400/80">{ag.won || '—'}</Td>
         <Td className="text-right text-slate-400">{cps(ag.spend, ag.won)}</Td>
         <Td className="text-right text-slate-400">{ag.revenue > 0 ? fmt$(ag.revenue) : '—'}</Td>
         <Td className={`text-right ${roasClass(ag.revenue, ag.spend)}`}>{roas(ag.revenue, ag.spend)}</Td>
-        <Td className="text-right text-slate-400">{convRate(ag.leads, ag.clicks)}</Td>
+        <Td className="text-right text-slate-400">{convRate(leads, ag.clicks)}</Td>
       </tr>
       {open && ag.ads.map(ad => <AdRow key={ad.id} ad={ad} />)}
     </>
@@ -182,7 +239,7 @@ function AdGroupRow({ ag }: { ag: import('@/lib/mockData').AdGroupData }) {
 function CampaignRow({ c }: { c: import('@/lib/mockData').CampaignData }) {
   const [open, setOpen] = useState(false);
   const hasGroups = c.adGroups.length > 0;
-
+  const leads = totalLeads(c.formLeads, c.callLeads);
   return (
     <>
       <tr
@@ -193,11 +250,8 @@ function CampaignRow({ c }: { c: import('@/lib/mockData').CampaignData }) {
           <span className="inline-flex items-center gap-2">
             {hasGroups
               ? <ChevronRight size={14} className={`chevron-icon text-blue-400 flex-shrink-0 ${open ? 'open' : ''}`} />
-              : <span className="w-3.5" />
-            }
-            <span className={`font-medium ${hasGroups ? 'text-blue-400 hover:text-blue-300' : 'text-slate-400'}`}>
-              {c.name}
-            </span>
+              : <span className="w-3.5" />}
+            <span className={`font-medium ${hasGroups ? 'text-blue-400 hover:text-blue-300' : 'text-slate-400'}`}>{c.name}</span>
           </span>
         </Td>
         <Td><StatusBadge status={c.status} /></Td>
@@ -206,13 +260,13 @@ function CampaignRow({ c }: { c: import('@/lib/mockData').CampaignData }) {
         <Td className="text-right">{c.clicks > 0 ? c.ctr : '—'}</Td>
         <Td className="text-right">{c.spend > 0 ? fmt$(c.spend) : '—'}</Td>
         <Td className="text-right">{cpc(c.spend, c.clicks)}</Td>
-        <Td className="text-right text-cyan-400 font-semibold">{c.leads > 0 ? c.leads : '—'}</Td>
-        <Td className="text-right">{cpl(c.spend, c.leads)}</Td>
+        <Td className="text-right"><LeadCell formLeads={c.formLeads} callLeads={c.callLeads} /></Td>
+        <Td className="text-right">{cpl(c.spend, c.formLeads, c.callLeads)}</Td>
         <Td className="text-right text-emerald-400 font-semibold">{c.won > 0 ? c.won : '—'}</Td>
         <Td className="text-right">{cps(c.spend, c.won)}</Td>
         <Td className="text-right">{c.revenue > 0 ? fmt$(c.revenue) : '—'}</Td>
         <Td className={`text-right ${roasClass(c.revenue, c.spend)}`}>{roas(c.revenue, c.spend)}</Td>
-        <Td className="text-right">{convRate(c.leads, c.clicks)}</Td>
+        <Td className="text-right">{convRate(leads, c.clicks)}</Td>
       </tr>
       {open && c.adGroups.map(ag => <AdGroupRow key={ag.id} ag={ag} />)}
     </>
@@ -221,39 +275,37 @@ function CampaignRow({ c }: { c: import('@/lib/mockData').CampaignData }) {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Home() {
-  // Totals
   const totalImpressions = campaigns.reduce((s, c) => s + c.impressions, 0);
   const totalClicks      = campaigns.reduce((s, c) => s + c.clicks, 0);
   const totalSpend       = campaigns.reduce((s, c) => s + c.spend, 0);
-  const totalLeads       = campaigns.reduce((s, c) => s + c.leads, 0);
+  const totalFormLeads   = campaigns.reduce((s, c) => s + c.formLeads, 0);
+  const totalCallLeads   = campaigns.reduce((s, c) => s + c.callLeads, 0);
+  const totalGhlLeads    = totalFormLeads + totalCallLeads;
   const totalWon         = campaigns.reduce((s, c) => s + c.won, 0);
   const totalRevenue     = campaigns.reduce((s, c) => s + c.revenue, 0);
   const avgCpc           = totalClicks ? totalSpend / totalClicks : 0;
-  const totalCpl         = totalLeads  ? totalSpend / totalLeads  : 0;
-  const totalCps         = totalWon    ? totalSpend / totalWon    : 0;
-  const totalRoas        = totalSpend  ? totalRevenue / totalSpend : 0;
-  const convR            = totalClicks ? (totalLeads / totalClicks) * 100 : 0;
+  const totalCpl         = totalGhlLeads ? totalSpend / totalGhlLeads : 0;
+  const totalCps         = totalWon ? totalSpend / totalWon : 0;
+  const totalRoas        = totalSpend ? totalRevenue / totalSpend : 0;
 
-  // Funnel data for bar chart
+  // Funnel data
   const funnelData = [
     { stage: 'Impressions', value: totalImpressions, fill: '#8b5cf6' },
     { stage: 'Clicks',      value: totalClicks,      fill: '#3b82f6' },
-    { stage: 'Leads',       value: totalLeads,       fill: '#06b6d4' },
+    { stage: 'GHL Leads',   value: totalGhlLeads,    fill: '#06b6d4' },
     { stage: 'Opps',        value: 45,               fill: '#f59e0b' },
-    { stage: 'Won',         value: totalWon,         fill: '#10b981' },
+    { stage: 'Won Deals',   value: totalWon,         fill: '#10b981' },
   ];
 
-  // Lead source pie
-  const pieData = [
-    { name: 'Brand Search', value: 65, fill: '#10b981' },
-    { name: 'Non-Brand',    value: 35, fill: '#3b82f6' },
-    { name: 'Perf Max',     value: 20, fill: '#8b5cf6' },
-    { name: 'Display',      value: 5,  fill: '#f59e0b' },
-  ];
+  // Lead source by campaign (top 4 active)
+  const activeCampaigns = campaigns.filter(c => c.status === 'active');
+
+  // Trend: combined GHL leads per week
+  const combinedLeadTrend = trendData.formLeads.map((f, i) => f + trendData.callLeads[i]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* ── Top Header Bar ── */}
+      {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-white/8 bg-background/80 backdrop-blur-xl">
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -277,43 +329,56 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto w-full px-6 py-6 flex flex-col gap-8">
+      {/* ── Data source notice ── */}
+      <div className="max-w-[1600px] mx-auto w-full px-6 pt-4">
+        <div className="flex items-center gap-3 text-[11px] bg-blue-500/8 border border-blue-500/20 rounded-lg px-4 py-2.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+          <span className="text-blue-300 font-medium">Lead Data Source:</span>
+          <span className="text-slate-400">
+            All lead counts, CPL, and CPS are calculated from <span className="text-white font-medium">GoHighLevel form submissions + inbound calls</span> only.
+            Google Ads conversion data is used for impressions, clicks, spend, and CPC only.
+          </span>
+        </div>
+      </div>
 
-        {/* ── Section: KPI Hero Cards ── */}
+      <main className="max-w-[1600px] mx-auto w-full px-6 py-5 flex flex-col gap-7">
+
+        {/* ── Row 1: KPI Hero Cards ── */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <BarChart2 size={14} className="text-muted-foreground" />
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Period Summary</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            <KpiCard label="Impressions"  value={totalImpressions.toLocaleString()} delta="+12%" deltaDir="up"   color="bg-purple-500/15 text-purple-400" icon={Eye} />
-            <KpiCard label="Clicks"       value={totalClicks.toLocaleString()}       delta="+8%"  deltaDir="up"   color="bg-blue-500/15 text-blue-400"   icon={MousePointerClick} />
-            <KpiCard label="Avg CPC"      value={`$${avgCpc.toFixed(2)}`}            delta="-5%"  deltaDir="up"   color="bg-cyan-500/15 text-cyan-400"   icon={Target} />
-            <KpiCard label="Total Spend"  value={fmt$(totalSpend)}                   sub="Google Ads API"         color="bg-slate-500/15 text-slate-400" icon={DollarSign} />
-            <KpiCard label="Total Leads"  value={totalLeads.toString()}              delta="+18%" deltaDir="up"   color="bg-cyan-500/15 text-cyan-400"   icon={Users} sub={`Conv: ${convR.toFixed(1)}%`} />
-            <KpiCard label="Cost / Lead"  value={`$${totalCpl.toFixed(2)}`}          delta="-9%"  deltaDir="up"   color="bg-blue-500/15 text-blue-400"   icon={Target} />
-            <KpiCard label="Won Deals"    value={totalWon.toString()}                delta="+22%" deltaDir="up"   color="bg-emerald-500/15 text-emerald-400" icon={Trophy} />
-            <KpiCard label="Cost / Sale"  value={`$${totalCps.toFixed(2)}`}          delta="-14%" deltaDir="up"   color="bg-emerald-500/15 text-emerald-400" icon={TrendingUp} sub={`ROAS: ${totalRoas.toFixed(1)}x`} />
+            <KpiCard label="Impressions"  value={totalImpressions.toLocaleString()} delta="+12%" deltaDir="up"  color="bg-purple-500/15 text-purple-400"   icon={Eye} />
+            <KpiCard label="Clicks"       value={totalClicks.toLocaleString()}       delta="+8%"  deltaDir="up"  color="bg-blue-500/15 text-blue-400"       icon={MousePointerClick} />
+            <KpiCard label="Avg CPC"      value={`$${avgCpc.toFixed(2)}`}            delta="-5%"  deltaDir="up"  color="bg-cyan-500/15 text-cyan-400"       icon={Target} sub="Google Ads" />
+            <KpiCard label="Total Spend"  value={fmt$(totalSpend)}                   sub="Google Ads API"        color="bg-slate-500/15 text-slate-400"     icon={DollarSign} />
+            <KpiCard label="GHL Leads"    value={totalGhlLeads.toString()}           delta="+18%" deltaDir="up"  color="bg-cyan-500/15 text-cyan-400"       icon={Users} sub={`${totalFormLeads} forms · ${totalCallLeads} calls`} />
+            <KpiCard label="Cost / Lead"  value={`$${totalCpl.toFixed(2)}`}          delta="-9%"  deltaDir="up"  color="bg-blue-500/15 text-blue-400"       icon={Target} sub="GHL leads only" />
+            <KpiCard label="Won Deals"    value={totalWon.toString()}                delta="+22%" deltaDir="up"  color="bg-emerald-500/15 text-emerald-400" icon={Trophy} sub="GHL pipeline" />
+            <KpiCard label="Cost / Sale"  value={`$${totalCps.toFixed(2)}`}          delta="-14%" deltaDir="up"  color="bg-emerald-500/15 text-emerald-400" icon={TrendingUp} sub={`ROAS: ${totalRoas.toFixed(1)}x`} />
           </div>
         </section>
 
-        {/* ── Section: Trend Sparklines ── */}
+        {/* ── Row 2: GHL Lead Split + Trend Sparklines ── */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={14} className="text-muted-foreground" />
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Weekly Trends</h2>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <SparkCard label="Impressions" data={trendData.impressions} weeks={trendData.weeks} color="#8b5cf6" />
-            <SparkCard label="Clicks"      data={trendData.clicks}      weeks={trendData.weeks} color="#3b82f6" />
-            <SparkCard label="Leads (GHL)" data={trendData.leads}       weeks={trendData.weeks} color="#06b6d4" />
-            <SparkCard label="Won Deals"   data={trendData.won}         weeks={trendData.weeks} color="#10b981" />
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <LeadSplitCard formLeads={totalFormLeads} callLeads={totalCallLeads} />
+            <SparkCard label="Impressions"    data={trendData.impressions}  weeks={trendData.weeks} color="#8b5cf6" />
+            <SparkCard label="Clicks"         data={trendData.clicks}       weeks={trendData.weeks} color="#3b82f6" />
+            <SparkCard label="GHL Leads"      data={combinedLeadTrend}      weeks={trendData.weeks} color="#06b6d4" badge="GHL" />
+            <SparkCard label="Won Deals"      data={trendData.won}          weeks={trendData.weeks} color="#10b981" badge="GHL" />
           </div>
         </section>
 
-        {/* ── Section: Funnel + Pie ── */}
+        {/* ── Row 3: Funnel + Lead Source Mix ── */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Funnel – CSS bars (renders in all contexts) */}
+          {/* Funnel */}
           <div className="lg:col-span-2 rounded-xl border border-white/8 bg-card p-5">
             <div className="flex items-center gap-2 mb-5">
               <Target size={14} className="text-muted-foreground" />
@@ -325,10 +390,14 @@ export default function Home() {
                 const nextConv = i < funnelData.length - 1
                   ? ((funnelData[i + 1].value / stage.value) * 100).toFixed(1) + '%'
                   : null;
+                const isGhl = stage.stage === 'GHL Leads' || stage.stage === 'Opps' || stage.stage === 'Won Deals';
                 return (
                   <div key={stage.stage} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-24 text-right flex-shrink-0">{stage.stage}</span>
-                    <div className="flex-1 h-7 rounded bg-white/5 overflow-hidden relative">
+                    <div className="flex items-center gap-1.5 w-28 justify-end flex-shrink-0">
+                      {isGhl && <span className="text-[9px] text-muted-foreground/60 bg-white/5 px-1 rounded">GHL</span>}
+                      <span className="text-xs text-muted-foreground">{stage.stage}</span>
+                    </div>
+                    <div className="flex-1 h-7 rounded bg-white/5 overflow-hidden">
                       <div
                         className="h-full rounded transition-all duration-700"
                         style={{ width: `${Math.max(pct, 0.5)}%`, background: stage.fill, opacity: 0.85 }}
@@ -337,124 +406,142 @@ export default function Home() {
                     <span className="text-sm font-bold text-foreground w-16 text-right flex-shrink-0 font-display">
                       {stage.value.toLocaleString()}
                     </span>
-                    {nextConv && (
-                      <span className="text-[10px] text-muted-foreground w-20 flex-shrink-0">→ {nextConv} conv.</span>
-                    )}
+                    {nextConv
+                      ? <span className="text-[10px] text-muted-foreground w-20 flex-shrink-0">→ {nextConv}</span>
+                      : <span className="w-20 flex-shrink-0" />
+                    }
                   </div>
                 );
               })}
             </div>
             <div className="mt-4 grid grid-cols-4 text-[10px] text-muted-foreground border-t border-white/8 pt-3">
-              {['Impr→Click: 1.3%', 'Click→Lead: 39.8%', 'Lead→Opp: 31.7%', 'Opp→Won: 40.0%'].map((label, i) => (
-                <div key={i} className="text-center">
-                  <span className="text-slate-400">{label}</span>
-                </div>
+              {['Impr→Click: 1.3%', 'Click→Lead: 21.3%', 'Lead→Opp: 32.8%', 'Opp→Won: 40.0%'].map((label, i) => (
+                <div key={i} className="text-center"><span className="text-slate-400">{label}</span></div>
               ))}
             </div>
           </div>
 
-          {/* Lead Source Mix – CSS bars */}
+          {/* Lead Source Mix by Campaign */}
           <div className="rounded-xl border border-white/8 bg-card p-5">
             <div className="flex items-center gap-2 mb-5">
               <Users size={14} className="text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Lead Source Mix</h3>
+              <h3 className="text-sm font-semibold text-foreground">GHL Leads by Campaign</h3>
             </div>
             {/* Stacked bar */}
-            <div className="h-5 rounded-full overflow-hidden flex mb-5">
-              {pieData.map(d => (
-                <div
-                  key={d.name}
-                  className="h-full first:rounded-l-full last:rounded-r-full"
-                  style={{ width: `${(d.value / pieData.reduce((s, x) => s + x.value, 0)) * 100}%`, background: d.fill }}
-                />
-              ))}
+            <div className="h-4 rounded-full overflow-hidden flex mb-4">
+              {activeCampaigns.map((c, i) => {
+                const leads = totalLeads(c.formLeads, c.callLeads);
+                const pct = totalGhlLeads ? (leads / totalGhlLeads) * 100 : 0;
+                const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#06b6d4'];
+                return <div key={c.id} className="h-full" style={{ width: `${pct}%`, background: colors[i % colors.length] }} />;
+              })}
             </div>
-            {/* Legend rows with mini bars */}
             <div className="flex flex-col gap-3">
-              {pieData.map(d => {
-                const total = pieData.reduce((s, x) => s + x.value, 0);
-                const pct = ((d.value / total) * 100).toFixed(0);
+              {activeCampaigns.map((c, i) => {
+                const leads = totalLeads(c.formLeads, c.callLeads);
+                const pct = totalGhlLeads ? ((leads / totalGhlLeads) * 100).toFixed(0) : '0';
+                const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#06b6d4'];
                 return (
-                  <div key={d.name}>
+                  <div key={c.id}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.fill }} />
-                        <span className="text-xs text-muted-foreground">{d.name}</span>
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[i % colors.length] }} />
+                        <span className="text-xs text-muted-foreground truncate max-w-[130px]">{c.name.replace('Search – ', '').replace('Local Services – ', 'LSA – ')}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-foreground font-display">{d.value}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs font-bold text-foreground font-display">{leads}</span>
                         <span className="text-[10px] text-muted-foreground">{pct}%</span>
                       </div>
                     </div>
-                    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: d.fill, opacity: 0.7 }} />
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: colors[i % colors.length], opacity: 0.7 }} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-4">
+                      <span className="flex items-center gap-0.5"><FileText size={9} className="text-blue-400" /> {c.formLeads} forms</span>
+                      <span className="flex items-center gap-0.5"><Phone size={9} className="text-emerald-400" /> {c.callLeads} calls</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-5 pt-4 border-t border-white/8 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Total Leads</span>
-              <span className="kpi-value text-lg text-foreground">{pieData.reduce((s, d) => s + d.value, 0)}</span>
+            <div className="mt-4 pt-3 border-t border-white/8 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Total GHL Leads</span>
+              <span className="kpi-value text-lg text-foreground">{totalGhlLeads}</span>
             </div>
           </div>
         </section>
 
-        {/* ── Section: Campaign Drill-Down Table ── */}
+        {/* ── Row 4: Campaign Drill-Down Table ── */}
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <BarChart2 size={14} className="text-muted-foreground" />
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Campaign Performance</h2>
-              <span className="text-[10px] text-muted-foreground/60 ml-1">— click a campaign to expand Ad Groups, click an Ad Group to expand individual Ads</span>
+              <span className="text-[10px] text-muted-foreground/60 ml-1 hidden lg:inline">— click campaign to expand Ad Groups · click Ad Group to expand Ads</span>
             </div>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> Active</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Paused</span>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><FileText size={10} className="text-blue-400" /> Forms</span>
+              <span className="flex items-center gap-1"><Phone size={10} className="text-emerald-400" /> Calls</span>
+              <span className="text-white/20">|</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Active</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> Paused</span>
             </div>
           </div>
 
           <div className="rounded-xl border border-white/8 bg-card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px]">
+              <table className="w-full min-w-[1200px]">
                 <thead>
                   <tr className="bg-white/4 border-b border-white/8">
-                    <Th className="w-56">Campaign / Ad Group / Ad</Th>
+                    <Th className="w-52">Campaign / Ad Group / Ad</Th>
                     <Th>Status</Th>
                     <Th className="text-right">Impr.</Th>
                     <Th className="text-right">Clicks</Th>
                     <Th className="text-right">CTR</Th>
                     <Th className="text-right">Spend</Th>
                     <Th className="text-right">CPC</Th>
-                    <Th className="text-right text-cyan-400">Leads</Th>
+                    <Th className="text-right">
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-cyan-400">GHL Leads</span>
+                        <span className="text-[9px] text-blue-400/70 font-normal normal-case tracking-normal flex items-center gap-0.5"><FileText size={8} />forms <Phone size={8} className="ml-1 text-emerald-400/70" />calls</span>
+                      </div>
+                    </Th>
                     <Th className="text-right">CPL</Th>
                     <Th className="text-right text-emerald-400">Won</Th>
                     <Th className="text-right">CPS</Th>
                     <Th className="text-right">Revenue</Th>
                     <Th className="text-right">ROAS</Th>
-                    <Th className="text-right">Conv %</Th>
+                    <Th className="text-right">Conv%</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {campaigns.map(c => <CampaignRow key={c.id} c={c} />)}
                 </tbody>
-                {/* Totals row */}
                 <tfoot>
                   <tr className="border-t-2 border-white/15 bg-white/4">
-                    <td className="px-3 py-3 text-sm font-bold text-foreground font-display">TOTAL</td>
-                    <td />
-                    <td className="px-3 py-3 text-sm font-bold text-right text-foreground">{totalImpressions.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-right text-foreground">{totalClicks.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-sm text-right text-muted-foreground">{convRate(totalLeads, totalClicks)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-right text-foreground">{fmt$(totalSpend)}</td>
-                    <td className="px-3 py-3 text-sm text-right text-muted-foreground">${avgCpc.toFixed(2)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-right text-cyan-400">{totalLeads}</td>
-                    <td className="px-3 py-3 text-sm text-right text-muted-foreground">${totalCpl.toFixed(2)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-right text-emerald-400">{totalWon}</td>
-                    <td className="px-3 py-3 text-sm text-right text-muted-foreground">${totalCps.toFixed(2)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-right text-foreground">{fmt$(totalRevenue)}</td>
-                    <td className={`px-3 py-3 text-sm font-bold text-right ${roasClass(totalRevenue, totalSpend)}`}>{roas(totalRevenue, totalSpend)}</td>
-                    <td className="px-3 py-3 text-sm text-right text-muted-foreground">{convRate(totalLeads, totalClicks)}</td>
+                    <td className="px-2.5 py-3 text-sm font-bold text-foreground font-display">TOTAL</td>
+                    <td /><td />
+                    <td className="px-2.5 py-3 text-sm font-bold text-right text-foreground">{totalClicks.toLocaleString()}</td>
+                    <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">—</td>
+                    <td className="px-2.5 py-3 text-sm font-bold text-right text-foreground">{fmt$(totalSpend)}</td>
+                    <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">${avgCpc.toFixed(2)}</td>
+                    <td className="px-2.5 py-3 text-right">
+                      <div className="flex flex-col gap-0.5 items-end">
+                        <span className="text-sm font-bold text-cyan-400">{totalGhlLeads}</span>
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="flex items-center gap-0.5 text-blue-400"><FileText size={9} />{totalFormLeads}</span>
+                          <span className="flex items-center gap-0.5 text-emerald-400"><Phone size={9} />{totalCallLeads}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">${totalCpl.toFixed(2)}</td>
+                    <td className="px-2.5 py-3 text-sm font-bold text-right text-emerald-400">{totalWon}</td>
+                    <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">${totalCps.toFixed(2)}</td>
+                    <td className="px-2.5 py-3 text-sm font-bold text-right text-foreground">{fmt$(totalRevenue)}</td>
+                    <td className={`px-2.5 py-3 text-sm font-bold text-right ${roasClass(totalRevenue, totalSpend)}`}>{roas(totalRevenue, totalSpend)}</td>
+                    <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">{convRate(totalGhlLeads, totalClicks)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -464,8 +551,8 @@ export default function Home() {
 
         {/* ── Footer ── */}
         <footer className="border-t border-white/8 pt-4 pb-8 flex items-center justify-between text-[11px] text-muted-foreground/60">
-          <span>Data: Google Ads API (impressions, clicks, spend, CPC, CTR) × GoHighLevel API (leads, opportunities, won deals, revenue)</span>
-          <span>KPIs calculated server-side · Prototype with mock data</span>
+          <span>Google Ads API: impressions, clicks, spend, CPC, CTR · GoHighLevel API: form leads, call leads, opportunities, won deals, revenue</span>
+          <span>Prototype · mock data</span>
         </footer>
       </main>
     </div>

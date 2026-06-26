@@ -1,7 +1,12 @@
 // ─── Mock data representing Google Ads × GoHighLevel attribution ─────────────
-// In production these values come from:
-//   - Google Ads API: impressions, clicks, spend, CPC, CTR
-//   - GoHighLevel API/webhooks: leads, opportunities, won deals, revenue
+//
+// DATA SOURCE RULES (important for production wiring):
+//   Google Ads API  → impressions, clicks, spend, CPC, CTR  (ad performance only)
+//   GoHighLevel API → formLeads, callLeads, opportunities, won, revenue
+//
+// CPL is calculated as:  spend ÷ (formLeads + callLeads)
+// Google's own "conversions" column is intentionally NOT used for lead counting.
+// GHL is the single source of truth for all lead, opportunity, and deal data.
 
 export interface AdData {
   id: string;
@@ -9,7 +14,9 @@ export interface AdData {
   clicks: number;
   ctr: string;
   spend: number;
-  leads: number;
+  // GHL lead sources — Google conversions deliberately excluded
+  formLeads: number;   // GHL: form submissions attributed via GCLID
+  callLeads: number;   // GHL: inbound calls attributed via call tracking / GCLID
   won: number;
   revenue: number;
 }
@@ -19,7 +26,8 @@ export interface AdGroupData {
   name: string;
   clicks: number;
   spend: number;
-  leads: number;
+  formLeads: number;
+  callLeads: number;
   won: number;
   revenue: number;
   ads: AdData[];
@@ -33,7 +41,8 @@ export interface CampaignData {
   clicks: number;
   ctr: string;
   spend: number;
-  leads: number;
+  formLeads: number;
+  callLeads: number;
   won: number;
   revenue: number;
   adGroups: AdGroupData[];
@@ -48,7 +57,8 @@ export const campaigns: CampaignData[] = [
     clicks: 154,
     ctr: '5.00%',
     spend: 282.27,
-    leads: 65,
+    formLeads: 38,
+    callLeads: 27,
     won: 10,
     revenue: 10000,
     adGroups: [
@@ -57,13 +67,14 @@ export const campaigns: CampaignData[] = [
         name: 'Brand – Exact Match',
         clicks: 72,
         spend: 118.00,
-        leads: 32,
+        formLeads: 18,
+        callLeads: 14,
         won: 5,
         revenue: 5000,
         ads: [
-          { id: 'a1', headline: 'Top Injury Lawyers Near You', clicks: 31, ctr: '6.2%', spend: 52, leads: 14, won: 3, revenue: 3000 },
-          { id: 'a2', headline: 'Free Case Review – Call Now', clicks: 24, ctr: '5.8%', spend: 40, leads: 11, won: 1, revenue: 1000 },
-          { id: 'a3', headline: 'Award-Winning Legal Team', clicks: 17, ctr: '4.1%', spend: 26, leads: 7, won: 1, revenue: 1000 },
+          { id: 'a1', headline: 'Top Injury Lawyers Near You',    clicks: 31, ctr: '6.2%', spend: 52,  formLeads: 8,  callLeads: 6,  won: 3, revenue: 3000 },
+          { id: 'a2', headline: 'Free Case Review – Call Now',    clicks: 24, ctr: '5.8%', spend: 40,  formLeads: 6,  callLeads: 5,  won: 1, revenue: 1000 },
+          { id: 'a3', headline: 'Award-Winning Legal Team',       clicks: 17, ctr: '4.1%', spend: 26,  formLeads: 4,  callLeads: 3,  won: 1, revenue: 1000 },
         ],
       },
       {
@@ -71,12 +82,13 @@ export const campaigns: CampaignData[] = [
         name: 'Brand – Phrase Match',
         clicks: 48,
         spend: 95.00,
-        leads: 21,
+        formLeads: 13,
+        callLeads: 8,
         won: 3,
         revenue: 3000,
         ads: [
-          { id: 'a4', headline: 'Experienced Attorneys – Free Review', clicks: 28, ctr: '5.5%', spend: 55, leads: 13, won: 2, revenue: 2000 },
-          { id: 'a5', headline: 'No Win No Fee – Call Today', clicks: 20, ctr: '4.9%', spend: 40, leads: 8, won: 1, revenue: 1000 },
+          { id: 'a4', headline: 'Experienced Attorneys – Free Review', clicks: 28, ctr: '5.5%', spend: 55, formLeads: 8, callLeads: 5, won: 2, revenue: 2000 },
+          { id: 'a5', headline: 'No Win No Fee – Call Today',           clicks: 20, ctr: '4.9%', spend: 40, formLeads: 5, callLeads: 3, won: 1, revenue: 1000 },
         ],
       },
       {
@@ -84,11 +96,12 @@ export const campaigns: CampaignData[] = [
         name: 'Brand – Competitor',
         clicks: 34,
         spend: 69.27,
-        leads: 12,
+        formLeads: 7,
+        callLeads: 5,
         won: 2,
         revenue: 2000,
         ads: [
-          { id: 'a6', headline: 'Better Than [Competitor] – See Why', clicks: 34, ctr: '3.8%', spend: 69.27, leads: 12, won: 2, revenue: 2000 },
+          { id: 'a6', headline: 'Better Than [Competitor] – See Why', clicks: 34, ctr: '3.8%', spend: 69.27, formLeads: 7, callLeads: 5, won: 2, revenue: 2000 },
         ],
       },
     ],
@@ -101,7 +114,8 @@ export const campaigns: CampaignData[] = [
     clicks: 91,
     ctr: '5.88%',
     spend: 1603.56,
-    leads: 35,
+    formLeads: 20,
+    callLeads: 15,
     won: 4,
     revenue: 4000,
     adGroups: [
@@ -110,12 +124,13 @@ export const campaigns: CampaignData[] = [
         name: "Workers' Comp – General",
         clicks: 55,
         spend: 968,
-        leads: 22,
+        formLeads: 13,
+        callLeads: 9,
         won: 3,
         revenue: 3000,
         ads: [
-          { id: 'a7', headline: 'Hurt at Work? Get Compensation', clicks: 30, ctr: '6.1%', spend: 529, leads: 13, won: 2, revenue: 2000 },
-          { id: 'a8', headline: 'Workers Comp Lawyers – Free Consult', clicks: 25, ctr: '5.4%', spend: 439, leads: 9, won: 1, revenue: 1000 },
+          { id: 'a7', headline: 'Hurt at Work? Get Compensation',          clicks: 30, ctr: '6.1%', spend: 529, formLeads: 8, callLeads: 5, won: 2, revenue: 2000 },
+          { id: 'a8', headline: "Workers Comp Lawyers – Free Consult",     clicks: 25, ctr: '5.4%', spend: 439, formLeads: 5, callLeads: 4, won: 1, revenue: 1000 },
         ],
       },
       {
@@ -123,12 +138,13 @@ export const campaigns: CampaignData[] = [
         name: "Workers' Comp – Specific Injuries",
         clicks: 36,
         spend: 635.56,
-        leads: 13,
+        formLeads: 7,
+        callLeads: 6,
         won: 1,
         revenue: 1000,
         ads: [
-          { id: 'a9', headline: 'Back Injury at Work – Call Now', clicks: 20, ctr: '5.9%', spend: 352, leads: 8, won: 1, revenue: 1000 },
-          { id: 'a10', headline: 'Slip & Fall Workplace Accident', clicks: 16, ctr: '4.8%', spend: 283.56, leads: 5, won: 0, revenue: 0 },
+          { id: 'a9',  headline: 'Back Injury at Work – Call Now',    clicks: 20, ctr: '5.9%', spend: 352,    formLeads: 4, callLeads: 4, won: 1, revenue: 1000 },
+          { id: 'a10', headline: 'Slip & Fall Workplace Accident',    clicks: 16, ctr: '4.8%', spend: 283.56, formLeads: 3, callLeads: 2, won: 0, revenue: 0 },
         ],
       },
     ],
@@ -141,7 +157,8 @@ export const campaigns: CampaignData[] = [
     clicks: 82,
     ctr: '5.28%',
     spend: 2086.23,
-    leads: 20,
+    formLeads: 8,
+    callLeads: 12,
     won: 2,
     revenue: 2000,
     adGroups: [
@@ -150,11 +167,12 @@ export const campaigns: CampaignData[] = [
         name: 'Local Services – All',
         clicks: 82,
         spend: 2086.23,
-        leads: 20,
+        formLeads: 8,
+        callLeads: 12,
         won: 2,
         revenue: 2000,
         ads: [
-          { id: 'a11', headline: 'Local Service Ad – Auto-Generated', clicks: 82, ctr: '5.28%', spend: 2086.23, leads: 20, won: 2, revenue: 2000 },
+          { id: 'a11', headline: 'Local Service Ad – Auto-Generated', clicks: 82, ctr: '5.28%', spend: 2086.23, formLeads: 8, callLeads: 12, won: 2, revenue: 2000 },
         ],
       },
     ],
@@ -167,7 +185,8 @@ export const campaigns: CampaignData[] = [
     clicks: 15,
     ctr: '3.50%',
     spend: 3780.48,
-    leads: 12,
+    formLeads: 5,
+    callLeads: 7,
     won: 1,
     revenue: 1000,
     adGroups: [
@@ -176,12 +195,13 @@ export const campaigns: CampaignData[] = [
         name: 'Auto Accident – High Intent',
         clicks: 10,
         spend: 2520,
-        leads: 8,
+        formLeads: 3,
+        callLeads: 5,
         won: 1,
         revenue: 1000,
         ads: [
-          { id: 'a12', headline: 'Car Accident Attorney – Call Now', clicks: 6, ctr: '4.2%', spend: 1512, leads: 5, won: 1, revenue: 1000 },
-          { id: 'a13', headline: 'Auto Accident? Get Max Settlement', clicks: 4, ctr: '3.1%', spend: 1008, leads: 3, won: 0, revenue: 0 },
+          { id: 'a12', headline: 'Car Accident Attorney – Call Now',        clicks: 6, ctr: '4.2%', spend: 1512,    formLeads: 2, callLeads: 3, won: 1, revenue: 1000 },
+          { id: 'a13', headline: 'Auto Accident? Get Max Settlement',       clicks: 4, ctr: '3.1%', spend: 1008,    formLeads: 1, callLeads: 2, won: 0, revenue: 0 },
         ],
       },
       {
@@ -189,11 +209,12 @@ export const campaigns: CampaignData[] = [
         name: 'Truck Accident – Specialized',
         clicks: 5,
         spend: 1260.48,
-        leads: 4,
+        formLeads: 2,
+        callLeads: 2,
         won: 0,
         revenue: 0,
         ads: [
-          { id: 'a14', headline: '18-Wheeler Accident Lawyers', clicks: 5, ctr: '2.8%', spend: 1260.48, leads: 4, won: 0, revenue: 0 },
+          { id: 'a14', headline: '18-Wheeler Accident Lawyers', clicks: 5, ctr: '2.8%', spend: 1260.48, formLeads: 2, callLeads: 2, won: 0, revenue: 0 },
         ],
       },
     ],
@@ -206,7 +227,8 @@ export const campaigns: CampaignData[] = [
     clicks: 15,
     ctr: '0.08%',
     spend: 77.11,
-    leads: 5,
+    formLeads: 3,
+    callLeads: 2,
     won: 1,
     revenue: 500,
     adGroups: [
@@ -215,11 +237,12 @@ export const campaigns: CampaignData[] = [
         name: 'Display – Retargeting',
         clicks: 15,
         spend: 77.11,
-        leads: 5,
+        formLeads: 3,
+        callLeads: 2,
         won: 1,
         revenue: 500,
         ads: [
-          { id: 'a15', headline: 'Display Ad – Emergency Legal Help', clicks: 15, ctr: '0.08%', spend: 77.11, leads: 5, won: 1, revenue: 500 },
+          { id: 'a15', headline: 'Display Ad – Emergency Legal Help', clicks: 15, ctr: '0.08%', spend: 77.11, formLeads: 3, callLeads: 2, won: 1, revenue: 500 },
         ],
       },
     ],
@@ -228,68 +251,54 @@ export const campaigns: CampaignData[] = [
     id: 'c6',
     name: 'Performance Max – Leads',
     status: 'paused',
-    impressions: 0,
-    clicks: 0,
-    ctr: '0.00%',
-    spend: 0,
-    leads: 0,
-    won: 0,
-    revenue: 0,
+    impressions: 0, clicks: 0, ctr: '0.00%', spend: 0,
+    formLeads: 0, callLeads: 0, won: 0, revenue: 0,
     adGroups: [],
   },
   {
     id: 'c7',
     name: 'PMax – Auto & Truck (sLocal)',
     status: 'paused',
-    impressions: 0,
-    clicks: 0,
-    ctr: '0.00%',
-    spend: 0,
-    leads: 0,
-    won: 0,
-    revenue: 0,
+    impressions: 0, clicks: 0, ctr: '0.00%', spend: 0,
+    formLeads: 0, callLeads: 0, won: 0, revenue: 0,
     adGroups: [],
   },
   {
     id: 'c8',
-    name: "Bankruptcy Leads – Search",
+    name: 'Bankruptcy Leads – Search',
     status: 'paused',
-    impressions: 0,
-    clicks: 0,
-    ctr: '0.00%',
-    spend: 0,
-    leads: 0,
-    won: 0,
-    revenue: 0,
+    impressions: 0, clicks: 0, ctr: '0.00%', spend: 0,
+    formLeads: 0, callLeads: 0, won: 0, revenue: 0,
     adGroups: [],
   },
 ];
 
-// Weekly trend data (4 weeks)
+// Weekly trend data (4 weeks) — GHL is source of truth for leads
 export const trendData = {
   weeks: ['Jun 1–7', 'Jun 8–14', 'Jun 15–21', 'Jun 22–26'],
   impressions: [5200, 8100, 10300, 2963],
-  clicks: [72, 110, 140, 35],
-  leads: [24, 48, 58, 12],
-  won: [3, 6, 7, 2],
+  clicks:      [72,   110,  140,   35],
+  formLeads:   [14,   28,   35,    8],   // GHL form submissions
+  callLeads:   [10,   20,   23,    4],   // GHL inbound calls
+  won:         [3,    6,    7,     2],
 };
 
-// Helpers
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+export function totalLeads(formLeads: number, callLeads: number) {
+  return formLeads + callLeads;
+}
 export function fmt$(n: number) {
-  if (n === 0) return '$0.00';
+  if (n === 0) return '$0';
   if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
   return `$${n.toFixed(2)}`;
-}
-export function fmtShort$(n: number) {
-  if (n === 0) return '—';
-  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
 }
 export function cpc(spend: number, clicks: number) {
   if (!clicks) return '—';
   return `$${(spend / clicks).toFixed(2)}`;
 }
-export function cpl(spend: number, leads: number) {
+// CPL uses GHL total leads only — NOT Google conversions
+export function cpl(spend: number, formLeads: number, callLeads: number) {
+  const leads = formLeads + callLeads;
   if (!leads) return '—';
   return `$${(spend / leads).toFixed(2)}`;
 }
