@@ -22,7 +22,7 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="w-56 flex-shrink-0 border-r border-white/8 bg-card flex flex-col min-h-screen">
+    <aside className="w-56 flex-shrink-0 border-r border-white/8 bg-card flex flex-col h-screen sticky top-0">
       <div className="h-14 flex items-center gap-2.5 px-4 border-b border-white/8">
         <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={12} className="text-blue-400" />
