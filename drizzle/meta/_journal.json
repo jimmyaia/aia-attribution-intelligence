@@ -15,6 +15,13 @@
       "when": 1782494802201,
       "tag": "0001_happy_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1782496309107,
+      "tag": "0002_lumpy_terror",
+      "breakpoints": true
     }
   ]
 }

@@ -89,4 +89,54 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createEmailUser(data: {
+  email: string;
+  passwordHash: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  website?: string;
+  agencyName?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const name = `${data.firstName} ${data.lastName}`;
+  await db.insert(users).values({
+    email: data.email,
+    passwordHash: data.passwordHash,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    phone: data.phone ?? null,
+    website: data.website ?? null,
+    agencyName: data.agencyName ?? null,
+    name,
+    loginMethod: "email",
+    profileComplete: true,
+    lastSignedIn: new Date(),
+  });
+  const created = await getUserByEmail(data.email);
+  if (!created) throw new Error("Failed to create user");
+  return created;
+}
+
 // TODO: add feature queries here as your schema grows.

@@ -290,8 +290,13 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
-    if (!user) {
+    // Email/password auth: openId is stored as the numeric user id string (e.g. "42")
+    if (!user && /^\d+$/.test(sessionUserId)) {
+      user = await db.getUserById(parseInt(sessionUserId, 10));
+    }
+
+    // If user not in DB, sync from OAuth server automatically (Manus OAuth only)
+    if (!user && !(/^\d+$/.test(sessionUserId))) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");
         await db.upsertUser({
@@ -312,10 +317,13 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
-    await db.upsertUser({
-      openId: user.openId,
-      lastSignedIn: signedInAt,
-    });
+    // Only update lastSignedIn for Manus OAuth users (email users update on login)
+    if (user.openId) {
+      await db.upsertUser({
+        openId: user.openId,
+        lastSignedIn: signedInAt,
+      });
+    }
 
     return user;
   }

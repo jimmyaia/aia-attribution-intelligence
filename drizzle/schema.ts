@@ -11,9 +11,10 @@ import {
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  openId: varchar("openId", { length: 64 }).unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }),
   name: text("name"),
-  email: varchar("email", { length: 320 }),
+  email: varchar("email", { length: 320 }).unique(),
   agencyName: varchar("agencyName", { length: 255 }),
   firstName: varchar("firstName", { length: 128 }),
   lastName: varchar("lastName", { length: 128 }),

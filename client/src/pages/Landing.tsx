@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import {
   Zap, BarChart2, TrendingUp, Phone, Trophy, ChevronRight,
 } from "lucide-react";
@@ -81,16 +80,16 @@ export default function Landing() {
               </Link>
             ) : (
               <>
-                <a href={getLoginUrl()}>
+                <Link href="/login">
                   <button className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5">
                     Log In
                   </button>
-                </a>
-                <a href={getLoginUrl()}>
+                </Link>
+                <Link href="/register">
                   <Button size="sm" className="gap-1.5">
                     Get Started <ChevronRight size={14} />
                   </Button>
-                </a>
+                </Link>
               </>
             )}
           </div>
@@ -113,11 +112,11 @@ export default function Landing() {
           Cost Per Lead and Cost Per Sale calculated from your actual CRM data.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a href={getLoginUrl()}>
-            <Button size="lg" className="gap-2 px-8">
+          <Link href="/register">
+            <Button size="lg" className="gap-2 px-8 bg-blue-600 hover:bg-blue-500">
               Start Free Trial <ChevronRight size={16} />
             </Button>
-          </a>
+          </Link>
           <Link href="/pricing">
             <Button size="lg" variant="outline" className="gap-2 px-8">
               See Pricing
@@ -191,11 +190,11 @@ export default function Landing() {
               <div className="text-4xl font-bold text-foreground">$49</div>
               <div className="text-muted-foreground text-sm">per month</div>
             </div>
-            <a href={getLoginUrl()} className="w-full">
-              <Button size="lg" className="w-full gap-2">
+            <Link href="/register" className="w-full">
+              <Button size="lg" className="w-full gap-2 bg-blue-600 hover:bg-blue-500">
                 Get Started <ChevronRight size={16} />
               </Button>
-            </a>
+            </Link>
             <p className="text-xs text-muted-foreground text-center">Cancel anytime. No contracts.</p>
           </div>
         </div>

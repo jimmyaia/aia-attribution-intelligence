@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import Integrations from "./pages/Integrations";
 import Billing from "./pages/Billing";
 import Onboarding from "./pages/Onboarding";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
 import { useAuth } from "./_core/hooks/useAuth";
 import { trpc } from "./lib/trpc";
 import { useEffect } from "react";
@@ -27,7 +29,7 @@ function PostLoginRedirect() {
     if (!user) return;
     // Only redirect to onboarding when the user navigates to the dashboard
     // Never redirect on public pages (/, /pricing, /onboarding)
-    const publicRoutes = ["/", "/pricing", "/onboarding", "/404"];
+    const publicRoutes = ["/", "/pricing", "/onboarding", "/register", "/login", "/404"];
     if (publicRoutes.includes(location)) return;
     if (profileQuery.data && !profileQuery.data.profileComplete) {
       setLocation("/onboarding");
@@ -45,6 +47,8 @@ function Router() {
         <Route path="/" component={Landing} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/onboarding" component={Onboarding} />
+        <Route path="/register" component={Register} />
+        <Route path="/login" component={Login} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/dashboard/integrations" component={Integrations} />
         <Route path="/dashboard/billing" component={Billing} />

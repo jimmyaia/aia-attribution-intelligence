@@ -1,11 +1,13 @@
 import Stripe from "stripe";
+import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { getDb } from "./db";
+import { getDb, getUserByEmail, createEmailUser } from "./db";
+import { sdk } from "./_core/sdk";
 import {
   subscriptions,
   googleAdsConnections,
@@ -51,6 +53,75 @@ export const appRouter = router({
   // ── Auth ──────────────────────────────────────────────────────────────────
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+
+    register: publicProcedure
+      .input(z.object({
+        firstName: z.string().min(1).max(128),
+        lastName: z.string().min(1).max(128),
+        email: z.string().email().max(320),
+        password: z.string().min(8).max(128),
+        phone: z.string().max(32).optional(),
+        website: z.string().max(512).optional(),
+        agencyName: z.string().max(255).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check if email already exists
+        const existing = await getUserByEmail(input.email);
+        if (existing) {
+          throw new Error("An account with this email already exists.");
+        }
+        const passwordHash = await bcrypt.hash(input.password, 12);
+        const user = await createEmailUser({
+          email: input.email,
+          passwordHash,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          phone: input.phone,
+          website: input.website,
+          agencyName: input.agencyName,
+        });
+        // Issue session cookie using the same JWT mechanism
+        const token = await sdk.createSessionToken(user.id.toString(), {
+          name: user.name ?? user.email ?? "",
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 365 * 24 * 60 * 60 * 1000,
+        });
+        return { success: true, userId: user.id };
+      }),
+
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await getUserByEmail(input.email);
+        if (!user || !user.passwordHash) {
+          throw new Error("Invalid email or password.");
+        }
+        const valid = await bcrypt.compare(input.password, user.passwordHash);
+        if (!valid) {
+          throw new Error("Invalid email or password.");
+        }
+        // Update last signed in
+        const db = await getDb();
+        if (db) {
+          await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
+        }
+        const token = await sdk.createSessionToken(user.id.toString(), {
+          name: user.name ?? user.email ?? "",
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 365 * 24 * 60 * 60 * 1000,
+        });
+        return { success: true, userId: user.id };
+      }),
+
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
