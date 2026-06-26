@@ -8,8 +8,23 @@ import {
   ChevronRight, TrendingUp, TrendingDown, Minus,
   Eye, MousePointerClick, Users, Trophy, DollarSign,
   Zap, Target, BarChart2, RefreshCw, Calendar,
-  FileText, Phone,
+  FileText, Phone, Layers,
 } from 'lucide-react';
+
+// ─── Lead view type ───────────────────────────────────────────────────────────
+type LeadView = 'total' | 'forms' | 'calls';
+
+const LEAD_VIEWS: { value: LeadView; label: string; icon: React.ElementType; color: string }[] = [
+  { value: 'total', label: 'Total',  icon: Layers,   color: 'text-cyan-400' },
+  { value: 'forms', label: 'Forms',  icon: FileText, color: 'text-blue-400' },
+  { value: 'calls', label: 'Calls',  icon: Phone,    color: 'text-emerald-400' },
+];
+
+function getLeadCount(formLeads: number, callLeads: number, view: LeadView) {
+  if (view === 'forms') return formLeads;
+  if (view === 'calls') return callLeads;
+  return formLeads + callLeads;
+}
 
 // ─── KPI Card ────────────────────────────────────────────────────────────────
 function KpiCard({
@@ -164,24 +179,49 @@ const Th = ({ children, className = '' }: { children?: React.ReactNode; classNam
   <th className={`px-2.5 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left whitespace-nowrap ${className}`}>{children}</th>
 );
 
-// ─── Lead Split Cell (forms + calls inline) ───────────────────────────────────
-function LeadCell({ formLeads, callLeads }: { formLeads: number; callLeads: number }) {
-  const total = formLeads + callLeads;
-  if (!total) return <span className="text-muted-foreground">—</span>;
+// ─── Lead Toggle ─────────────────────────────────────────────────────────────
+function LeadToggle({ view, onChange }: { view: LeadView; onChange: (v: LeadView) => void }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-bold text-cyan-400">{total}</span>
-      <div className="flex items-center gap-2 text-[10px]">
-        <span className="flex items-center gap-0.5 text-blue-400"><FileText size={9} />{formLeads}</span>
-        <span className="flex items-center gap-0.5 text-emerald-400"><Phone size={9} />{callLeads}</span>
-      </div>
+    <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
+      {LEAD_VIEWS.map(({ value, label, icon: Icon, color }) => (
+        <button
+          key={value}
+          onClick={() => onChange(value)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150 ${
+            view === value
+              ? `bg-white/10 ${color} shadow-sm`
+              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+          }`}
+        >
+          <Icon size={11} />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Lead Split Cell ─────────────────────────────────────────────────────────
+function LeadCell({ formLeads, callLeads, view }: { formLeads: number; callLeads: number; view: LeadView }) {
+  const count = getLeadCount(formLeads, callLeads, view);
+  if (!count && view === 'total' && (formLeads + callLeads) === 0) return <span className="text-muted-foreground">—</span>;
+  const colorMap: Record<LeadView, string> = { total: 'text-cyan-400', forms: 'text-blue-400', calls: 'text-emerald-400' };
+  return (
+    <div className="flex flex-col gap-0.5 items-end">
+      <span className={`font-bold ${colorMap[view]}`}>{count || '—'}</span>
+      {view === 'total' && count > 0 && (
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="flex items-center gap-0.5 text-blue-400"><FileText size={9} />{formLeads}</span>
+          <span className="flex items-center gap-0.5 text-emerald-400"><Phone size={9} />{callLeads}</span>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Ad Row ───────────────────────────────────────────────────────────────────
-function AdRow({ ad }: { ad: import('@/lib/mockData').AdData }) {
-  const leads = totalLeads(ad.formLeads, ad.callLeads);
+function AdRow({ ad, view }: { ad: import('@/lib/mockData').AdData; view: LeadView }) {
+  const leads = getLeadCount(ad.formLeads, ad.callLeads, view);
   return (
     <tr className="table-row-hover border-t border-white/4">
       <Td className="drill-level-2">
@@ -193,8 +233,8 @@ function AdRow({ ad }: { ad: import('@/lib/mockData').AdData }) {
       <Td className="text-right">{ad.ctr}</Td>
       <Td className="text-right">{fmt$(ad.spend)}</Td>
       <Td className="text-right">{cpc(ad.spend, ad.clicks)}</Td>
-      <Td className="text-right"><LeadCell formLeads={ad.formLeads} callLeads={ad.callLeads} /></Td>
-      <Td className="text-right">{cpl(ad.spend, ad.formLeads, ad.callLeads)}</Td>
+      <Td className="text-right"><LeadCell formLeads={ad.formLeads} callLeads={ad.callLeads} view={view} /></Td>
+      <Td className="text-right">{leads ? `$${(ad.spend / leads).toFixed(2)}` : '—'}</Td>
       <Td className="text-right text-emerald-400">{ad.won || '—'}</Td>
       <Td className="text-right">{cps(ad.spend, ad.won)}</Td>
       <Td className="text-right">{ad.revenue > 0 ? fmt$(ad.revenue) : '—'}</Td>
@@ -205,9 +245,9 @@ function AdRow({ ad }: { ad: import('@/lib/mockData').AdData }) {
 }
 
 // ─── Ad Group Row ─────────────────────────────────────────────────────────────
-function AdGroupRow({ ag }: { ag: import('@/lib/mockData').AdGroupData }) {
+function AdGroupRow({ ag, view }: { ag: import('@/lib/mockData').AdGroupData; view: LeadView }) {
   const [open, setOpen] = useState(false);
-  const leads = totalLeads(ag.formLeads, ag.callLeads);
+  const leads = getLeadCount(ag.formLeads, ag.callLeads, view);
   return (
     <>
       <tr className="table-row-hover border-t border-white/5 cursor-pointer" onClick={() => setOpen(o => !o)}>
@@ -222,24 +262,24 @@ function AdGroupRow({ ag }: { ag: import('@/lib/mockData').AdGroupData }) {
         <Td className="text-right text-slate-400">—</Td>
         <Td className="text-right text-slate-400">{fmt$(ag.spend)}</Td>
         <Td className="text-right text-slate-400">{cpc(ag.spend, ag.clicks)}</Td>
-        <Td className="text-right"><LeadCell formLeads={ag.formLeads} callLeads={ag.callLeads} /></Td>
-        <Td className="text-right text-slate-400">{cpl(ag.spend, ag.formLeads, ag.callLeads)}</Td>
+        <Td className="text-right"><LeadCell formLeads={ag.formLeads} callLeads={ag.callLeads} view={view} /></Td>
+        <Td className="text-right text-slate-400">{leads ? `$${(ag.spend / leads).toFixed(2)}` : '—'}</Td>
         <Td className="text-right text-emerald-400/80">{ag.won || '—'}</Td>
         <Td className="text-right text-slate-400">{cps(ag.spend, ag.won)}</Td>
         <Td className="text-right text-slate-400">{ag.revenue > 0 ? fmt$(ag.revenue) : '—'}</Td>
         <Td className={`text-right ${roasClass(ag.revenue, ag.spend)}`}>{roas(ag.revenue, ag.spend)}</Td>
         <Td className="text-right text-slate-400">{convRate(leads, ag.clicks)}</Td>
       </tr>
-      {open && ag.ads.map(ad => <AdRow key={ad.id} ad={ad} />)}
+      {open && ag.ads.map(ad => <AdRow key={ad.id} ad={ad} view={view} />)}
     </>
   );
 }
 
 // ─── Campaign Row ─────────────────────────────────────────────────────────────
-function CampaignRow({ c }: { c: import('@/lib/mockData').CampaignData }) {
+function CampaignRow({ c, view }: { c: import('@/lib/mockData').CampaignData; view: LeadView }) {
   const [open, setOpen] = useState(false);
   const hasGroups = c.adGroups.length > 0;
-  const leads = totalLeads(c.formLeads, c.callLeads);
+  const leads = getLeadCount(c.formLeads, c.callLeads, view);
   return (
     <>
       <tr
@@ -260,21 +300,22 @@ function CampaignRow({ c }: { c: import('@/lib/mockData').CampaignData }) {
         <Td className="text-right">{c.clicks > 0 ? c.ctr : '—'}</Td>
         <Td className="text-right">{c.spend > 0 ? fmt$(c.spend) : '—'}</Td>
         <Td className="text-right">{cpc(c.spend, c.clicks)}</Td>
-        <Td className="text-right"><LeadCell formLeads={c.formLeads} callLeads={c.callLeads} /></Td>
-        <Td className="text-right">{cpl(c.spend, c.formLeads, c.callLeads)}</Td>
+        <Td className="text-right"><LeadCell formLeads={c.formLeads} callLeads={c.callLeads} view={view} /></Td>
+        <Td className="text-right">{leads ? `$${(c.spend / leads).toFixed(2)}` : '—'}</Td>
         <Td className="text-right text-emerald-400 font-semibold">{c.won > 0 ? c.won : '—'}</Td>
         <Td className="text-right">{cps(c.spend, c.won)}</Td>
         <Td className="text-right">{c.revenue > 0 ? fmt$(c.revenue) : '—'}</Td>
         <Td className={`text-right ${roasClass(c.revenue, c.spend)}`}>{roas(c.revenue, c.spend)}</Td>
         <Td className="text-right">{convRate(leads, c.clicks)}</Td>
       </tr>
-      {open && c.adGroups.map(ag => <AdGroupRow key={ag.id} ag={ag} />)}
+      {open && c.adGroups.map(ag => <AdGroupRow key={ag.id} ag={ag} view={view} />)}
     </>
   );
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Home() {
+  const [leadView, setLeadView] = useState<LeadView>('total');
   const totalImpressions = campaigns.reduce((s, c) => s + c.impressions, 0);
   const totalClicks      = campaigns.reduce((s, c) => s + c.clicks, 0);
   const totalSpend       = campaigns.reduce((s, c) => s + c.spend, 0);
@@ -475,18 +516,23 @@ export default function Home() {
 
         {/* ── Row 4: Campaign Drill-Down Table ── */}
         <section>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <BarChart2 size={14} className="text-muted-foreground" />
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Campaign Performance</h2>
               <span className="text-[10px] text-muted-foreground/60 ml-1 hidden lg:inline">— click campaign to expand Ad Groups · click Ad Group to expand Ads</span>
             </div>
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><FileText size={10} className="text-blue-400" /> Forms</span>
-              <span className="flex items-center gap-1"><Phone size={10} className="text-emerald-400" /> Calls</span>
-              <span className="text-white/20">|</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Active</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> Paused</span>
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Lead view toggle */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">GHL Leads:</span>
+                <LeadToggle view={leadView} onChange={setLeadView} />
+              </div>
+              <span className="text-white/20 hidden sm:inline">|</span>
+              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Active</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> Paused</span>
+              </div>
             </div>
           </div>
 
@@ -504,8 +550,12 @@ export default function Home() {
                     <Th className="text-right">CPC</Th>
                     <Th className="text-right">
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-cyan-400">GHL Leads</span>
-                        <span className="text-[9px] text-blue-400/70 font-normal normal-case tracking-normal flex items-center gap-0.5"><FileText size={8} />forms <Phone size={8} className="ml-1 text-emerald-400/70" />calls</span>
+                        {leadView === 'total' && <span className="text-cyan-400">GHL Leads</span>}
+                        {leadView === 'forms' && <span className="text-blue-400 flex items-center gap-1"><FileText size={9} />Web Forms</span>}
+                        {leadView === 'calls' && <span className="text-emerald-400 flex items-center gap-1"><Phone size={9} />Phone Calls</span>}
+                        {leadView === 'total' && (
+                          <span className="text-[9px] text-muted-foreground/60 font-normal normal-case tracking-normal">forms + calls</span>
+                        )}
                       </div>
                     </Th>
                     <Th className="text-right">CPL</Th>
@@ -517,7 +567,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {campaigns.map(c => <CampaignRow key={c.id} c={c} />)}
+                  {campaigns.map(c => <CampaignRow key={c.id} c={c} view={leadView} />)}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-white/15 bg-white/4">
@@ -528,15 +578,28 @@ export default function Home() {
                     <td className="px-2.5 py-3 text-sm font-bold text-right text-foreground">{fmt$(totalSpend)}</td>
                     <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">${avgCpc.toFixed(2)}</td>
                     <td className="px-2.5 py-3 text-right">
-                      <div className="flex flex-col gap-0.5 items-end">
-                        <span className="text-sm font-bold text-cyan-400">{totalGhlLeads}</span>
-                        <div className="flex items-center gap-2 text-[10px]">
-                          <span className="flex items-center gap-0.5 text-blue-400"><FileText size={9} />{totalFormLeads}</span>
-                          <span className="flex items-center gap-0.5 text-emerald-400"><Phone size={9} />{totalCallLeads}</span>
-                        </div>
-                      </div>
+                      {(() => {
+                        const viewTotal = getLeadCount(totalFormLeads, totalCallLeads, leadView);
+                        const colorMap: Record<LeadView, string> = { total: 'text-cyan-400', forms: 'text-blue-400', calls: 'text-emerald-400' };
+                        return (
+                          <div className="flex flex-col gap-0.5 items-end">
+                            <span className={`text-sm font-bold ${colorMap[leadView]}`}>{viewTotal}</span>
+                            {leadView === 'total' && (
+                              <div className="flex items-center gap-2 text-[10px]">
+                                <span className="flex items-center gap-0.5 text-blue-400"><FileText size={9} />{totalFormLeads}</span>
+                                <span className="flex items-center gap-0.5 text-emerald-400"><Phone size={9} />{totalCallLeads}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
-                    <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">${totalCpl.toFixed(2)}</td>
+                    <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">
+                      {(() => {
+                        const viewTotal = getLeadCount(totalFormLeads, totalCallLeads, leadView);
+                        return viewTotal ? `$${(totalSpend / viewTotal).toFixed(2)}` : '—';
+                      })()}
+                    </td>
                     <td className="px-2.5 py-3 text-sm font-bold text-right text-emerald-400">{totalWon}</td>
                     <td className="px-2.5 py-3 text-sm text-right text-muted-foreground">${totalCps.toFixed(2)}</td>
                     <td className="px-2.5 py-3 text-sm font-bold text-right text-foreground">{fmt$(totalRevenue)}</td>
