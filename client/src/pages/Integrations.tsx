@@ -2,11 +2,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, Link } from "wouter";
 import {
   Zap, BarChart2, CreditCard, LogOut, Link2,
   CheckCircle2, AlertCircle, ExternalLink, Unlink,
@@ -70,10 +69,34 @@ function Sidebar() {
 
 function GoogleAdsCard() {
   const { data: conn, refetch } = trpc.googleAds.getConnection.useQuery();
+  const [origin] = useState(() => window.location.origin);
+  const { data: authData } = trpc.googleAds.getAuthorizeUrl.useQuery(
+    { origin },
+    { enabled: !conn?.isConnected }
+  );
   const disconnect = trpc.googleAds.disconnect.useMutation({
     onSuccess: () => { toast.success("Google Ads disconnected."); refetch(); },
     onError: (err) => toast.error(err.message),
   });
+
+  // Handle success/error query params from OAuth callback
+  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
+  useEffect(() => {
+    if (searchParams.get("google_connected") === "1") {
+      toast.success("Google Ads connected successfully!");
+      refetch();
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("google_connected");
+      window.history.replaceState({}, "", url.toString());
+    }
+    if (searchParams.get("google_error")) {
+      toast.error("Google Ads connection failed: " + searchParams.get("google_error"));
+      const url = new URL(window.location.href);
+      url.searchParams.delete("google_error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
 
   return (
     <div className="rounded-xl border border-white/8 bg-card p-6">
@@ -140,14 +163,27 @@ function GoogleAdsCard() {
           <p className="text-sm text-muted-foreground">
             Connect your Google Ads account via OAuth to pull campaign spend, clicks, impressions, and CTR data.
           </p>
-          <div className="rounded-lg bg-amber-500/8 border border-amber-500/20 p-3 text-xs text-amber-300">
-            <strong>Coming soon:</strong> Google Ads OAuth requires a Google Cloud project with the Ads API enabled.
-            Your developer will need to configure the OAuth client ID and redirect URI. The connect button will be
-            enabled once credentials are configured.
-          </div>
-          <Button variant="outline" size="sm" className="gap-1.5" disabled>
-            <ExternalLink size={13} /> Connect Google Ads (OAuth setup required)
-          </Button>
+          {authData?.configured ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => { if (authData.url) window.location.href = authData.url; }}
+            >
+              <ExternalLink size={13} /> Connect Google Ads via OAuth
+            </Button>
+          ) : (
+            <>
+              <div className="rounded-lg bg-amber-500/8 border border-amber-500/20 p-3 text-xs text-amber-300">
+                <strong>Setup required:</strong> Google Ads OAuth needs a Google Cloud project with the Ads API enabled.
+                Add <code className="font-mono">GOOGLE_CLIENT_ID</code>, <code className="font-mono">GOOGLE_CLIENT_SECRET</code>,
+                and <code className="font-mono">GOOGLE_ADS_DEVELOPER_TOKEN</code> to your environment to enable this integration.
+              </div>
+              <Button variant="outline" size="sm" className="gap-1.5" disabled>
+                <ExternalLink size={13} /> Connect Google Ads (credentials required)
+              </Button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -286,9 +322,9 @@ export default function Integrations() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <a href={getLoginUrl()}>
+        <Link href="/login">
           <Button size="lg">Sign In</Button>
-        </a>
+        </Link>
       </div>
     );
   }

@@ -1,10 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Zap, CheckCircle2, ChevronRight } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useEffect } from "react";
 
 const FEATURES = [
   "1 Google Ads account (OAuth)",
@@ -21,16 +21,29 @@ const FEATURES = [
 
 export default function Pricing() {
   const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
   const createCheckout = trpc.subscription.createCheckout.useMutation({
     onSuccess: (data) => {
-      if (data.url) window.open(data.url, "_blank");
+      if (data.url) window.location.href = data.url;
     },
     onError: (err) => toast.error(err.message),
   });
 
+  // Auto-trigger checkout when coming from registration
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("registered") === "true" && isAuthenticated) {
+      // Small delay to let auth state settle
+      const t = setTimeout(() => {
+        createCheckout.mutate({ origin: window.location.origin });
+      }, 800);
+      return () => clearTimeout(t);
+    }
+  }, [isAuthenticated]);
+
   const handleSubscribe = () => {
     if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+      window.location.href = "/register";
       return;
     }
     toast.info("Redirecting to checkout...");
@@ -57,11 +70,11 @@ export default function Pricing() {
               </Button>
             </Link>
           ) : (
-            <a href={getLoginUrl()}>
+            <Link href="/login">
               <Button size="sm" className="gap-1.5">
                 Sign In <ChevronRight size={14} />
               </Button>
-            </a>
+            </Link>
           )}
         </div>
       </nav>

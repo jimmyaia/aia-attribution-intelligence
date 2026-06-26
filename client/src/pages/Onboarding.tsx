@@ -2,11 +2,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Zap, User, Building2, Phone, Globe, Mail, ArrowRight, CheckCircle2 } from "lucide-react";
 
 export default function Onboarding() {
@@ -57,9 +56,9 @@ export default function Onboarding() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <a href={getLoginUrl()}>
+        <Link href="/login">
           <Button size="lg">Sign In to Continue</Button>
-        </a>
+        </Link>
       </div>
     );
   }

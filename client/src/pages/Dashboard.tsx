@@ -1,10 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   Zap, BarChart2, Settings, CreditCard, LogOut,
   AlertCircle, CheckCircle2, Link2,
@@ -159,9 +158,9 @@ export default function Dashboard() {
           <p className="text-muted-foreground text-sm mb-6">
             You need to sign in to access the attribution dashboard.
           </p>
-          <a href={getLoginUrl()}>
+          <Link href="/login">
             <Button size="lg" className="w-full">Sign In</Button>
-          </a>
+          </Link>
         </div>
       </div>
     );

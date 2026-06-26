@@ -262,6 +262,34 @@ export const appRouter = router({
 
   // ── Google Ads Connection ─────────────────────────────────────────────────
   googleAds: router({
+    getAuthorizeUrl: protectedProcedure
+      .input(z.object({ origin: z.string().url() }))
+      .query(({ ctx, input }) => {
+        const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
+        if (!clientId) return { url: null, configured: false };
+        const state = Buffer.from(
+          JSON.stringify({ userId: ctx.user.id, ts: Date.now() })
+        ).toString("base64url");
+        const callbackUrl = `${input.origin}/api/google-ads/callback`;
+        const params = new URLSearchParams({
+          client_id: clientId,
+          redirect_uri: callbackUrl,
+          response_type: "code",
+          scope: [
+            "https://www.googleapis.com/auth/adwords",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+          ].join(" "),
+          access_type: "offline",
+          prompt: "consent",
+          state,
+        });
+        return {
+          url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+          configured: true,
+        };
+      }),
+
     getConnection: protectedProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");

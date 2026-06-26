@@ -29,7 +29,7 @@
 - [x] Save + validate GHL API key (backend tRPC procedure)
 - [x] Show connected GHL sub-account name in Integrations page
 - [x] Disconnect button
-- [ ] Actually call GHL API to validate key on save (backend implementation)
+- [x] Actually call GHL API to validate key on save (backend implementation)
 
 ## Phase 6: Live Data
 - [ ] Replace mock campaign data with Google Ads API calls (using stored tokens)
@@ -41,11 +41,27 @@
 - [ ] Deliver to user with summary
 
 ## Phase 8: Registration & Login Flow Fix
-- [ ] Add profile fields to users table: firstName, lastName, phone, website, businessName
-- [ ] Push DB migration for new profile fields
-- [ ] Add tRPC procedure to save/update full profile
-- [ ] Build Registration/Onboarding page (first name, last name, email, phone, website, business name)
-- [ ] Show onboarding page automatically after first login if profile is incomplete
-- [ ] Add visible Login button to landing page header
-- [ ] Add visible Sign Up / Get Started CTA that goes to login then onboarding
-- [ ] Fix post-login redirect to check profile completeness and route accordingly
+- [x] Add profile fields to users table: firstName, lastName, phone, website, businessName
+- [x] Push DB migration for new profile fields
+- [x] Add tRPC procedure to save/update full profile
+- [x] Build Registration/Onboarding page (first name, last name, email, phone, website, business name)
+- [x] Show onboarding page automatically after first login if profile is incomplete
+- [x] Add visible Login button to landing page header
+- [x] Add visible Sign Up / Get Started CTA that goes to login then onboarding
+- [x] Fix post-login redirect to check profile completeness and route accordingly
+
+## Phase 9: Google Ads OAuth
+- [ ] Implement Google Ads OAuth 2.0 authorize URL endpoint
+- [ ] Implement Google Ads OAuth callback handler (exchange code, store tokens)
+- [ ] Show connected Google Ads account info in Integrations page
+- [ ] Google Ads disconnect/reconnect button
+
+## Phase 10: Date Range Picker + Admin Panel
+- [x] Add date range picker to dashboard header (Last 7/30 days, custom range)
+- [ ] Admin panel: list all registered agencies + subscription status
+- [ ] Multi-tenant data isolation: users only see their own data
+
+## Phase 11: Live Data Integration
+- [ ] Replace mock campaign data with Google Ads API calls
+- [ ] Replace mock lead data with GHL API calls (form submissions + inbound calls)
+- [ ] Cache API responses to avoid rate limits

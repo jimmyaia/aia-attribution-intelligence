@@ -1,9 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   Zap, BarChart2, CreditCard, LogOut, Link2,
   CheckCircle2, AlertCircle, ExternalLink,
@@ -102,9 +101,9 @@ export default function Billing() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <a href={getLoginUrl()}>
+        <Link href="/login">
           <Button size="lg">Sign In</Button>
-        </a>
+        </Link>
       </div>
     );
   }

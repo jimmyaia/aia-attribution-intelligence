@@ -8,8 +8,52 @@ import {
   ChevronRight, TrendingUp, TrendingDown, Minus,
   Eye, MousePointerClick, Users, Trophy, DollarSign,
   Zap, Target, BarChart2, RefreshCw, Calendar,
-  FileText, Phone, Layers,
+  FileText, Phone, Layers, ChevronDown,
 } from 'lucide-react';
+
+// ─── Date Range Picker ────────────────────────────────────────────────────────
+type DateRange = { label: string; days: number | null };
+
+const DATE_RANGES: DateRange[] = [
+  { label: 'Last 7 days',  days: 7 },
+  { label: 'Last 14 days', days: 14 },
+  { label: 'Last 30 days', days: 30 },
+  { label: 'Last 90 days', days: 90 },
+  { label: 'This month',   days: null },
+];
+
+function DateRangePicker({ value, onChange }: { value: DateRange; onChange: (r: DateRange) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground bg-white/5 border border-white/8 rounded-lg px-3 py-1.5 hover:bg-white/10 transition-colors"
+      >
+        <Calendar size={12} />
+        <span>{value.label}</span>
+        <ChevronDown size={11} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-xl border border-white/10 bg-card shadow-xl overflow-hidden">
+          {DATE_RANGES.map(r => (
+            <button
+              key={r.label}
+              onClick={() => { onChange(r); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                r.label === value.label
+                  ? 'bg-blue-500/15 text-blue-400 font-medium'
+                  : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Lead view type ───────────────────────────────────────────────────────────
 type LeadView = 'total' | 'forms' | 'calls';
@@ -316,6 +360,7 @@ function CampaignRow({ c, view }: { c: import('@/lib/mockData').CampaignData; vi
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Home() {
   const [leadView, setLeadView] = useState<LeadView>('total');
+  const [dateRange, setDateRange] = useState<DateRange>(DATE_RANGES[2]); // Last 30 days default
   const totalImpressions = campaigns.reduce((s, c) => s + c.impressions, 0);
   const totalClicks      = campaigns.reduce((s, c) => s + c.clicks, 0);
   const totalSpend       = campaigns.reduce((s, c) => s + c.spend, 0);
@@ -358,10 +403,7 @@ export default function Home() {
             <span className="text-xs text-muted-foreground">Google Ads × GoHighLevel</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-white/5 border border-white/8 rounded-lg px-3 py-1.5">
-              <Calendar size={12} />
-              <span>Jun 1 – Jun 26, 2026</span>
-            </div>
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
             <button className="flex items-center gap-1.5 text-xs text-muted-foreground bg-white/5 border border-white/8 rounded-lg px-3 py-1.5 hover:bg-white/10 transition-colors">
               <RefreshCw size={12} />
               <span>Refresh</span>
