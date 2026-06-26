@@ -25,11 +25,12 @@ function PostLoginRedirect() {
   useEffect(() => {
     if (loading || profileQuery.isLoading) return;
     if (!user) return;
-    // Only redirect when on the root or /dashboard without a profile
-    if (location === "/" || location === "/dashboard") {
-      if (profileQuery.data && !profileQuery.data.profileComplete) {
-        setLocation("/onboarding");
-      }
+    // Only redirect to onboarding when the user navigates to the dashboard
+    // Never redirect on public pages (/, /pricing, /onboarding)
+    const publicRoutes = ["/", "/pricing", "/onboarding", "/404"];
+    if (publicRoutes.includes(location)) return;
+    if (profileQuery.data && !profileQuery.data.profileComplete) {
+      setLocation("/onboarding");
     }
   }, [user, loading, profileQuery.data, profileQuery.isLoading, location, setLocation]);
 
