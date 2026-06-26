@@ -353,7 +353,7 @@ export default function Home() {
             <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
               <Zap size={14} className="text-blue-400" />
             </div>
-            <span className="font-display font-bold text-sm text-foreground tracking-tight">Attribution Intelligence</span>
+            <span className="font-display font-bold text-sm text-foreground tracking-tight">OneTouch Attribution Intelligence</span>
             <span className="text-white/20 text-xs">|</span>
             <span className="text-xs text-muted-foreground">Google Ads × GoHighLevel</span>
           </div>

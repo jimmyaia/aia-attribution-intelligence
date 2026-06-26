@@ -65,7 +65,7 @@ export default function Landing() {
             <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
               <Zap size={14} className="text-blue-400" />
             </div>
-            <span className="font-bold text-sm tracking-tight">Attribution Intelligence</span>
+            <span className="font-bold text-sm tracking-tight">OneTouch Attribution Intelligence</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/pricing">
@@ -203,7 +203,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-white/8 py-6 text-center text-xs text-muted-foreground">
-        Attribution Intelligence · Google Ads × GoHighLevel
+        OneTouch Attribution Intelligence · Google Ads × GoHighLevel
       </footer>
     </div>
   );
