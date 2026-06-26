@@ -39,3 +39,13 @@
 ## Phase 7: Checkpoint + Delivery
 - [ ] Save checkpoint
 - [ ] Deliver to user with summary
+
+## Phase 8: Registration & Login Flow Fix
+- [ ] Add profile fields to users table: firstName, lastName, phone, website, businessName
+- [ ] Push DB migration for new profile fields
+- [ ] Add tRPC procedure to save/update full profile
+- [ ] Build Registration/Onboarding page (first name, last name, email, phone, website, business name)
+- [ ] Show onboarding page automatically after first login if profile is incomplete
+- [ ] Add visible Login button to landing page header
+- [ ] Add visible Sign Up / Get Started CTA that goes to login then onboarding
+- [ ] Fix post-login redirect to check profile completeness and route accordingly

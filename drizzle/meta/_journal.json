@@ -8,6 +8,13 @@
       "when": 1782493727648,
       "tag": "0000_happy_pete_wisdom",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1782494802201,
+      "tag": "0001_happy_quasimodo",
+      "breakpoints": true
     }
   ]
 }

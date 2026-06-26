@@ -82,6 +82,36 @@ export const appRouter = router({
         .limit(1);
       return user ?? null;
     }),
+
+    saveProfile: protectedProcedure
+      .input(
+        z.object({
+          firstName: z.string().min(1).max(128),
+          lastName: z.string().min(1).max(128),
+          email: z.string().email().max(320).optional(),
+          phone: z.string().max(32).optional(),
+          website: z.string().max(512).optional(),
+          businessName: z.string().min(1).max(255),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db
+          .update(users)
+          .set({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email ?? ctx.user.email,
+            phone: input.phone ?? null,
+            website: input.website ?? null,
+            agencyName: input.businessName,
+            name: `${input.firstName} ${input.lastName}`,
+            profileComplete: true,
+          })
+          .where(eq(users.id, ctx.user.id));
+        return { success: true };
+      }),
   }),
 
   // ── Subscription ──────────────────────────────────────────────────────────

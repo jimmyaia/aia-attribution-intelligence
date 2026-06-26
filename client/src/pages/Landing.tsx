@@ -80,11 +80,18 @@ export default function Landing() {
                 </Button>
               </Link>
             ) : (
-              <a href={getLoginUrl()}>
-                <Button size="sm" className="gap-1.5">
-                  Get Started <ChevronRight size={14} />
-                </Button>
-              </a>
+              <>
+                <a href={getLoginUrl()}>
+                  <button className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5">
+                    Log In
+                  </button>
+                </a>
+                <a href={getLoginUrl()}>
+                  <Button size="sm" className="gap-1.5">
+                    Get Started <ChevronRight size={14} />
+                  </Button>
+                </a>
+              </>
             )}
           </div>
         </div>
