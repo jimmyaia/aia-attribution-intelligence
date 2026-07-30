@@ -23,7 +23,7 @@ export default function Onboarding() {
 
   const saveProfile = trpc.user.saveProfile.useMutation({
     onSuccess: () => {
-      toast.success("Profile saved! Welcome to OneTouch Attribution Intelligence.");
+      toast.success("Profile saved! Welcome to AIA Attribution Intelligence.");
       setLocation("/dashboard");
     },
     onError: (err) => toast.error(err.message),
@@ -70,7 +70,7 @@ export default function Onboarding() {
         <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={16} className="text-blue-400" />
         </div>
-        <span className="font-bold text-base tracking-tight text-foreground">OneTouch Attribution Intelligence</span>
+        <span className="font-bold text-base tracking-tight text-foreground">AIA Attribution Intelligence</span>
       </div>
 
       {/* Card */}

@@ -24,7 +24,7 @@ function Sidebar() {
         <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={12} className="text-blue-400" />
         </div>
-        <span className="font-bold text-xs tracking-tight truncate">OneTouch</span>
+        <span className="font-bold text-xs tracking-tight truncate">AIA</span>
       </div>
       <nav className="flex-1 p-2 flex flex-col gap-0.5">
         {NAV.map(({ icon: Icon, label, path }) => (
@@ -119,7 +119,7 @@ export default function Billing() {
           <div className="mb-6">
             <h1 className="text-xl font-bold text-foreground mb-1">Billing</h1>
             <p className="text-sm text-muted-foreground">
-              Manage your OneTouch Attribution Intelligence subscription.
+              Manage your AIA Attribution Intelligence subscription.
             </p>
           </div>
 

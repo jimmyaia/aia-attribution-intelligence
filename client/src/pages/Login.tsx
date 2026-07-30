@@ -43,7 +43,7 @@ export default function Login() {
           <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
             <Zap size={16} className="text-blue-400" />
           </div>
-          <span className="font-bold text-base tracking-tight text-foreground">OneTouch Attribution Intelligence</span>
+          <span className="font-bold text-base tracking-tight text-foreground">AIA Attribution Intelligence</span>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-card p-8 shadow-2xl">

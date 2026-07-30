@@ -26,7 +26,7 @@ function Sidebar() {
         <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={12} className="text-blue-400" />
         </div>
-        <span className="font-bold text-xs tracking-tight truncate">OneTouch</span>
+        <span className="font-bold text-xs tracking-tight truncate">AIA</span>
       </div>
 
       <nav className="flex-1 p-2 flex flex-col gap-0.5">
@@ -137,7 +137,7 @@ export default function Dashboard() {
     // Handle checkout success redirect
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
-      toast.success("Subscription activated! Welcome to OneTouch Attribution Intelligence.");
+      toast.success("Subscription activated! Welcome to AIA Attribution Intelligence.");
       window.history.replaceState({}, "", "/dashboard");
     }
   }, []);

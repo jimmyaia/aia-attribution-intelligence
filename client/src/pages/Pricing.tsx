@@ -60,7 +60,7 @@ export default function Pricing() {
               <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
                 <Zap size={14} className="text-blue-400" />
               </div>
-              <span className="font-bold text-sm tracking-tight">OneTouch Attribution Intelligence</span>
+              <span className="font-bold text-sm tracking-tight">AIA Attribution Intelligence</span>
             </div>
           </Link>
           {isAuthenticated ? (
