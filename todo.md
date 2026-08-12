@@ -65,3 +65,6 @@
 - [ ] Replace mock campaign data with Google Ads API calls
 - [ ] Replace mock lead data with GHL API calls (form submissions + inbound calls)
 - [ ] Cache API responses to avoid rate limits
+
+## Project Backup
+- [ ] Create a private GitHub repository backup of the current AIA Attribution Intelligence source code
