@@ -30,8 +30,20 @@ export const protectedProcedure = t.procedure.use(requireUser);
 
 export const paymentRecoveryProcedure = protectedProcedure;
 
+const rejectSupportViewWrites = t.middleware(async opts => {
+  if (opts.ctx.supportView) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Client View is read-only. Exit Client View to make changes." });
+  }
+  return opts.next();
+});
+
+export const paymentRecoveryWriteProcedure = paymentRecoveryProcedure.use(rejectSupportViewWrites);
+
 export const subscriptionAccessProcedure = paymentRecoveryProcedure.use(
   t.middleware(async opts => {
+    if (opts.ctx.supportView && opts.ctx.actor?.role === "admin") {
+      return opts.next();
+    }
     const user = opts.ctx.user;
     if (!user) {
       throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
@@ -43,6 +55,8 @@ export const subscriptionAccessProcedure = paymentRecoveryProcedure.use(
     return opts.next();
   }),
 );
+
+export const subscriptionWriteProcedure = subscriptionAccessProcedure.use(rejectSupportViewWrites);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {

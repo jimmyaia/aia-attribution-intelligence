@@ -95,11 +95,11 @@
 - [ ] Complete a live Stripe payment and reactivation smoke test with a non-admin customer account
 
 ## Support Impersonation
-- [ ] Add admin-only client-view session controls with a clear exit path
-- [ ] Record support-view audit events without exposing client credentials or API keys
-- [ ] Add a persistent support-mode indicator and restrict sensitive actions while viewing as a client
-- [ ] Add authorization and lifecycle regression tests for client-view sessions
-- [ ] Verify start, client view, and exit flows on desktop and mobile
+- [x] Add admin-only client-view session controls with a clear exit path
+- [x] Record support-view audit events without exposing client credentials or API keys
+- [x] Add a persistent support-mode indicator and restrict sensitive actions while viewing as a client
+- [x] Add authorization and lifecycle regression tests for client-view sessions
+- [x] Verify start, client view, and exit flows on desktop and mobile
 
 ## Deployment Follow-Up
 - [ ] Publish the latest checkpoint so the live domain serves the Admin Control Center route

@@ -3,11 +3,11 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, SUPPORT_VIEW_COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { paymentRecoveryProcedure, protectedProcedure, publicProcedure, router, subscriptionAccessProcedure } from "./_core/trpc";
-import { getDb, getUserByEmail, createEmailUser } from "./db";
+import { adminProcedure, paymentRecoveryWriteProcedure, paymentRecoveryProcedure, protectedProcedure, publicProcedure, router, subscriptionAccessProcedure, subscriptionWriteProcedure } from "./_core/trpc";
+import { createEmailUser, createSupportViewSession, endActiveSupportViewSessionsForAdmin, endSupportViewSession, getDb, getUserByEmail, getUserById } from "./db";
 import { sdk } from "./_core/sdk";
 import {
   subscriptions,
@@ -56,7 +56,18 @@ export const appRouter = router({
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(opts => {
+      if (!opts.ctx.user) return null;
+      return {
+        ...opts.ctx.user,
+        supportView: opts.ctx.supportView
+          ? {
+              ...opts.ctx.supportView,
+              adminName: opts.ctx.actor?.name ?? opts.ctx.actor?.email ?? "AIA administrator",
+            }
+          : null,
+      };
+    }),
 
     register: publicProcedure
       .input(z.object({
@@ -133,16 +144,60 @@ export const appRouter = router({
         return { success: true, userId: user.id, accountLocked: !billingAccess.allowed };
       }),
 
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      if (ctx.supportView && ctx.actor) {
+        await endSupportViewSession(ctx.supportView.sessionId, ctx.actor.id);
+      }
+      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
+      ctx.res.clearCookie(SUPPORT_VIEW_COOKIE_NAME, cookieOptions);
+      return { success: true } as const;
+    }),
+  }),
+
+  support: router({
+    start: adminProcedure
+      .input(z.object({ targetUserId: z.number().int().positive(), reason: z.string().trim().min(3).max(255).default("Support review") }))
+      .mutation(async ({ ctx, input }) => {
+        const target = await getUserById(input.targetUserId);
+        if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Client account not found" });
+        if (target.role === "admin" || target.id === ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Client View is only available for customer accounts." });
+        }
+        await endActiveSupportViewSessionsForAdmin(ctx.user.id);
+        const expiresInMs = 60 * 60 * 1000;
+        const session = await createSupportViewSession({
+          adminUserId: ctx.user.id,
+          targetUserId: target.id,
+          reason: input.reason,
+          expiresAt: new Date(Date.now() + expiresInMs),
+        });
+        const token = await sdk.createSupportViewToken({
+          sessionId: session.id,
+          adminUserId: ctx.user.id,
+          targetUserId: target.id,
+          expiresInMs,
+        });
+        ctx.res.cookie(SUPPORT_VIEW_COOKIE_NAME, token, {
+          ...getSessionCookieOptions(ctx.req),
+          maxAge: expiresInMs,
+        });
+        return { success: true, targetName: target.agencyName ?? target.name ?? target.email, expiresAt: session.expiresAt };
+      }),
+
+    exit: protectedProcedure.mutation(async ({ ctx }) => {
+      if (!ctx.supportView || !ctx.actor || ctx.actor.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No active Client View session." });
+      }
+      await endSupportViewSession(ctx.supportView.sessionId, ctx.actor.id);
+      ctx.res.clearCookie(SUPPORT_VIEW_COOKIE_NAME, getSessionCookieOptions(ctx.req));
       return { success: true } as const;
     }),
   }),
 
   // ── User / Profile ────────────────────────────────────────────────────────
   user: router({
-    updateAgencyName: subscriptionAccessProcedure
+    updateAgencyName: subscriptionWriteProcedure
       .input(z.object({ agencyName: z.string().min(1).max(255) }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -165,7 +220,7 @@ export const appRouter = router({
       return user ?? null;
     }),
 
-    saveProfile: subscriptionAccessProcedure
+    saveProfile: subscriptionWriteProcedure
       .input(
         z.object({
           firstName: z.string().min(1).max(128),
@@ -211,7 +266,7 @@ export const appRouter = router({
       return sub ?? null;
     }),
 
-    createCheckout: paymentRecoveryProcedure
+    createCheckout: paymentRecoveryWriteProcedure
       .input(z.object({ origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
         const customerId = await getOrCreateStripeCustomer(
@@ -251,7 +306,7 @@ export const appRouter = router({
         return { url: session.url };
       }),
 
-    createPortal: paymentRecoveryProcedure
+    createPortal: paymentRecoveryWriteProcedure
       .input(z.object({ origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -275,7 +330,7 @@ export const appRouter = router({
 
   // ── Google Ads Connection ─────────────────────────────────────────────────
   googleAds: router({
-    getAuthorizeUrl: subscriptionAccessProcedure
+    getAuthorizeUrl: subscriptionWriteProcedure
       .input(z.object({ origin: z.string().url() }))
       .query(({ ctx, input }) => {
         const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -321,7 +376,7 @@ export const appRouter = router({
       return conn ?? null;
     }),
 
-    disconnect: subscriptionAccessProcedure.mutation(async ({ ctx }) => {
+    disconnect: subscriptionWriteProcedure.mutation(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       await db
@@ -358,7 +413,7 @@ export const appRouter = router({
       return conn ?? null;
     }),
 
-    saveApiKey: subscriptionAccessProcedure
+    saveApiKey: subscriptionWriteProcedure
       .input(
         z.object({
           apiKey: z.string().min(10, "API key is too short"),
@@ -419,7 +474,7 @@ export const appRouter = router({
       return { success: true, locationName, locationId };
     }),
 
-    disconnect: subscriptionAccessProcedure.mutation(async ({ ctx }) => {
+    disconnect: subscriptionWriteProcedure.mutation(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       await db

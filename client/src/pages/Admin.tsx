@@ -19,6 +19,7 @@ import {
   CircleAlert,
   CircleCheck,
   CreditCard,
+  Eye,
   KeyRound,
   Loader2,
   Mail,
@@ -141,6 +142,7 @@ function OverviewCard({
 
 function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => void }) {
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
   const [status, setStatus] = useState<OnboardingStatus>(agency.onboardingStatus);
   const [notes, setNotes] = useState(agency.onboardingNotes ?? "");
   const [temporaryPassword, setTemporaryPassword] = useState("");
@@ -195,6 +197,15 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
     onError: error => toast.error(error.message),
   });
 
+  const startClientView = trpc.support.start.useMutation({
+    onSuccess: async data => {
+      await utils.auth.me.invalidate();
+      toast.success(`Viewing ${data.targetName ?? "client workspace"} in read-only mode`);
+      setLocation("/dashboard");
+    },
+    onError: error => toast.error(error.message),
+  });
+
   const checklist = [
     { label: "Account created", complete: true },
     { label: "Subscription active", complete: isActiveSubscription(agency.subscription.status) },
@@ -218,7 +229,15 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
           <h1 className="truncate text-xl font-semibold text-foreground">{agency.agencyName || agency.name || "Untitled agency"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{agency.email}</p>
         </div>
-        <StatusPill status={agency.onboardingStatus} />
+        <div className="flex shrink-0 items-center gap-2">
+          {agency.role !== "admin" && (
+            <Button size="sm" variant="outline" className="border-amber-500/30 text-amber-200 hover:bg-amber-500/10" onClick={() => startClientView.mutate({ targetUserId: agency.id, reason: "Support review from Admin Control Center" })} disabled={startClientView.isPending}>
+              {startClientView.isPending ? <Loader2 className="animate-spin" /> : <Eye />}
+              View as client
+            </Button>
+          )}
+          <StatusPill status={agency.onboardingStatus} />
+        </div>
       </div>
 
       <div className="grid flex-1 gap-5 overflow-y-auto p-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.8fr)]">

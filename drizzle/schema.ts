@@ -100,3 +100,18 @@ export const ghlConnections = mysqlTable("ghl_connections", {
 
 export type GhlConnection = typeof ghlConnections.$inferSelect;
 export type InsertGhlConnection = typeof ghlConnections.$inferInsert;
+
+// ─── Support View Sessions ───────────────────────────────────────────────────
+// A short-lived, auditable record of an administrator viewing a client workspace.
+// Client credentials and API tokens are never copied into this record.
+export const supportViewSessions = mysqlTable("support_view_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  adminUserId: int("adminUserId").notNull(),
+  targetUserId: int("targetUserId").notNull(),
+  reason: varchar("reason", { length: 255 }).notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  endedAt: timestamp("endedAt"),
+});
+
+export type SupportViewSession = typeof supportViewSessions.$inferSelect;

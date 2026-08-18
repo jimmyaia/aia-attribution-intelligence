@@ -32,6 +32,7 @@ function PostLoginRedirect() {
   useEffect(() => {
     if (loading || profileQuery.isLoading || accessQuery.isLoading) return;
     if (!user) return;
+    if (user.supportView) return;
     // Only redirect to onboarding when the user navigates to the dashboard
     // Never redirect on public pages (/, /pricing, /onboarding)
     const recoveryRoutes = ["/", "/pricing", "/onboarding", "/register", "/login", "/account-locked", "/dashboard/billing", "/404"];

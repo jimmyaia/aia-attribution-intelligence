@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, supportViewSessions, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -137,6 +137,71 @@ export async function createEmailUser(data: {
   const created = await getUserByEmail(data.email);
   if (!created) throw new Error("Failed to create user");
   return created;
+}
+
+export async function createSupportViewSession(data: {
+  adminUserId: number;
+  targetUserId: number;
+  reason: string;
+  expiresAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const inserted = await db.insert(supportViewSessions).values(data);
+  const sessionId = Number(inserted[0].insertId);
+  const [session] = await db
+    .select()
+    .from(supportViewSessions)
+    .where(eq(supportViewSessions.id, sessionId))
+    .limit(1);
+  if (!session) throw new Error("Failed to create support-view session");
+  return session;
+}
+
+export async function getActiveSupportViewSession(sessionId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const [session] = await db
+    .select()
+    .from(supportViewSessions)
+    .where(
+      and(
+        eq(supportViewSessions.id, sessionId),
+        isNull(supportViewSessions.endedAt),
+        gt(supportViewSessions.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+  return session;
+}
+
+export async function endSupportViewSession(sessionId: number, adminUserId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db
+    .update(supportViewSessions)
+    .set({ endedAt: new Date() })
+    .where(
+      and(
+        eq(supportViewSessions.id, sessionId),
+        eq(supportViewSessions.adminUserId, adminUserId),
+        isNull(supportViewSessions.endedAt),
+      ),
+    );
+}
+
+export async function endActiveSupportViewSessionsForAdmin(adminUserId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db
+    .update(supportViewSessions)
+    .set({ endedAt: new Date() })
+    .where(
+      and(
+        eq(supportViewSessions.adminUserId, adminUserId),
+        isNull(supportViewSessions.endedAt),
+      ),
+    );
 }
 
 // TODO: add feature queries here as your schema grows.

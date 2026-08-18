@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
+import { SupportViewBanner } from "@/components/SupportViewBanner";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
@@ -68,11 +69,12 @@ function Sidebar() {
 }
 
 function GoogleAdsCard() {
+  const { user } = useAuth();
   const { data: conn, refetch } = trpc.googleAds.getConnection.useQuery();
   const [origin] = useState(() => window.location.origin);
   const { data: authData } = trpc.googleAds.getAuthorizeUrl.useQuery(
     { origin },
-    { enabled: !conn?.isConnected }
+    { enabled: !conn?.isConnected && !user?.supportView }
   );
   const disconnect = trpc.googleAds.disconnect.useMutation({
     onSuccess: () => { toast.success("Google Ads disconnected."); refetch(); },
@@ -148,22 +150,22 @@ function GoogleAdsCard() {
               <span className="text-foreground font-mono text-xs">{conn.googleAccountId ?? "—"}</span>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10"
-            onClick={() => disconnect.mutate()}
-            disabled={disconnect.isPending}
-          >
-            <Unlink size={13} /> Disconnect
-          </Button>
+          {user?.supportView ? (
+            <p className="text-xs text-amber-300">Client View is read-only. Connection changes are disabled.</p>
+          ) : (
+            <Button variant="outline" size="sm" className="gap-1.5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>
+              <Unlink size={13} /> Disconnect
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Connect your Google Ads account via OAuth to pull campaign spend, clicks, impressions, and CTR data.
           </p>
-          {authData?.configured ? (
+          {user?.supportView ? (
+            <p className="text-xs text-amber-300">Client View is read-only. Connection changes are disabled.</p>
+          ) : authData?.configured ? (
             <Button
               variant="outline"
               size="sm"
@@ -191,6 +193,7 @@ function GoogleAdsCard() {
 }
 
 function GhlCard() {
+  const { user } = useAuth();
   const { data: conn, refetch } = trpc.ghl.getConnection.useQuery();
   const [apiKey, setApiKey] = useState("");
   const [locationId, setLocationId] = useState("");
@@ -252,15 +255,7 @@ function GhlCard() {
               </div>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10"
-            onClick={() => disconnect.mutate()}
-            disabled={disconnect.isPending}
-          >
-            <Unlink size={13} /> Disconnect
-          </Button>
+          {user?.supportView ? <p className="text-xs text-amber-300">Client View is read-only. Connection changes are disabled.</p> : <Button variant="outline" size="sm" className="gap-1.5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}><Unlink size={13} /> Disconnect</Button>}
         </div>
       ) : (
         <div className="space-y-4">
@@ -272,7 +267,7 @@ function GhlCard() {
             <strong>Where to find your API key:</strong> In GoHighLevel, go to
             Settings → Integrations → API Key. Copy the key and paste it below.
           </div>
-          <div className="space-y-3">
+          {!user?.supportView && <div className="space-y-3">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5 block">GHL API Key *</Label>
               <Input
@@ -301,7 +296,8 @@ function GhlCard() {
               <Link2 size={13} />
               {saveKey.isPending ? "Connecting..." : "Connect GoHighLevel"}
             </Button>
-          </div>
+          </div>}
+          {user?.supportView && <p className="text-xs text-amber-300">Client View is read-only. API keys and connection changes are disabled.</p>}
         </div>
       )}
     </div>
@@ -333,6 +329,7 @@ export default function Integrations() {
     <div className="min-h-screen bg-background flex">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
+        <SupportViewBanner />
         <div className="max-w-3xl mx-auto w-full px-6 py-8">
           <div className="mb-6">
             <h1 className="text-xl font-bold text-foreground mb-1">Integrations</h1>

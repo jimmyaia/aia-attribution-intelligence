@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import { SupportViewBanner } from "@/components/SupportViewBanner";
 import { toast } from "sonner";
 import { useLocation, Link } from "wouter";
 import {
@@ -115,6 +116,7 @@ export default function Billing() {
     <div className="min-h-screen bg-background flex">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
+        <SupportViewBanner />
         <div className="max-w-2xl mx-auto w-full px-6 py-8">
           <div className="mb-6">
             <h1 className="text-xl font-bold text-foreground mb-1">Billing</h1>
@@ -172,7 +174,9 @@ export default function Billing() {
               )}
 
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              {user.supportView ? (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.07] p-3 text-xs text-amber-200">Client View is read-only. Billing changes are disabled while you are viewing this customer workspace.</div>
+              ) : <div className="flex flex-col sm:flex-row gap-3">
                 {isActive ? (
                   <Button
                     variant="outline"
@@ -196,7 +200,7 @@ export default function Billing() {
                     {createCheckout.isPending ? "Redirecting..." : "Subscribe — $49/month"}
                   </Button>
                 )}
-              </div>
+              </div>}
 
               {!isActive && (
                 <div className="rounded-lg bg-blue-500/8 border border-blue-500/20 p-3 text-xs text-blue-300">

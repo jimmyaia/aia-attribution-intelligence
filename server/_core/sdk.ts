@@ -1,4 +1,4 @@
-import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS, SUPPORT_VIEW_COOKIE_NAME } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
@@ -22,6 +22,13 @@ export type SessionPayload = {
   openId: string;
   appId: string;
   name: string;
+};
+
+type SupportViewTokenPayload = {
+  sessionId: number;
+  adminUserId: number;
+  targetUserId: number;
+  appId: string;
 };
 
 const EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
@@ -232,6 +239,67 @@ class SDKServer {
     }
   }
 
+  async createSupportViewToken(data: {
+    sessionId: number;
+    adminUserId: number;
+    targetUserId: number;
+    expiresInMs: number;
+  }) {
+    const secretKey = this.getSessionSecret();
+    return new SignJWT({
+      type: "support_view",
+      sessionId: data.sessionId,
+      adminUserId: data.adminUserId,
+      targetUserId: data.targetUserId,
+      appId: ENV.appId,
+    })
+      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+      .setExpirationTime(Math.floor((Date.now() + data.expiresInMs) / 1000))
+      .sign(secretKey);
+  }
+
+  private async verifySupportViewToken(token: string | undefined | null): Promise<SupportViewTokenPayload | null> {
+    if (!token) return null;
+    try {
+      const secretKey = this.getSessionSecret();
+      const { payload } = await jwtVerify(token, secretKey, { algorithms: ["HS256"] });
+      const record = payload as Record<string, unknown>;
+      if (
+        record.type !== "support_view" ||
+        record.appId !== ENV.appId ||
+        !Number.isInteger(record.sessionId) ||
+        !Number.isInteger(record.adminUserId) ||
+        !Number.isInteger(record.targetUserId)
+      ) return null;
+      return {
+        sessionId: record.sessionId as number,
+        adminUserId: record.adminUserId as number,
+        targetUserId: record.targetUserId as number,
+        appId: record.appId as string,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async resolveSupportView(req: Request, actor: AuthenticatedUser): Promise<ResolvedSupportView | null> {
+    if (actor.role !== "admin") return null;
+    const token = this.parseCookies(req.headers.cookie).get(SUPPORT_VIEW_COOKIE_NAME);
+    const payload = await this.verifySupportViewToken(token);
+    if (!payload || payload.adminUserId !== actor.id) return null;
+    const session = await db.getActiveSupportViewSession(payload.sessionId);
+    if (!session || session.adminUserId !== actor.id || session.targetUserId !== payload.targetUserId) return null;
+    const targetUser = await db.getUserById(payload.targetUserId);
+    if (!targetUser || targetUser.role === "admin") return null;
+    return {
+      sessionId: session.id,
+      targetUser,
+      reason: session.reason,
+      startedAt: session.startedAt,
+      expiresAt: session.expiresAt,
+    };
+  }
+
   async getUserInfoWithJwt(
     jwtToken: string
   ): Promise<GetUserInfoWithJwtResponse> {
@@ -335,6 +403,14 @@ const CRON_OPEN_ID_PREFIX = "cron_";
 export type AuthenticatedUser = User & {
   taskUid?: string;
   isCron?: boolean;
+};
+
+export type ResolvedSupportView = {
+  sessionId: number;
+  targetUser: User;
+  reason: string;
+  startedAt: Date;
+  expiresAt: Date;
 };
 
 function buildCronUser(

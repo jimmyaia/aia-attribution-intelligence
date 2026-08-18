@@ -9,6 +9,7 @@ import {
   AlertCircle, Link2, ShieldCheck,
 } from "lucide-react";
 import Home from "./Home";
+import { SupportViewBanner } from "@/components/SupportViewBanner";
 
 export function Sidebar() {
   const { user, logout } = useAuth();
@@ -24,7 +25,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-[68px] sm:w-56 flex-shrink-0 border-r border-white/8 bg-card flex flex-col h-screen sticky top-0 transition-[width] duration-200">
+    <aside className="hidden w-56 flex-shrink-0 border-r border-white/8 bg-card sm:flex sm:h-screen sm:sticky sm:top-0">
       <div className="h-14 flex items-center justify-center gap-2.5 px-3 sm:justify-start sm:px-4 border-b border-white/8">
         <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={12} className="text-blue-400" />
@@ -74,14 +75,33 @@ export function Sidebar() {
   );
 }
 
+function MobileNavigation() {
+  const { user, logout } = useAuth();
+  const [location, setLocation] = useLocation();
+  const nav = [
+    { icon: BarChart2, label: "Report", path: "/dashboard" },
+    { icon: Link2, label: "Connect", path: "/dashboard/integrations" },
+    { icon: CreditCard, label: "Billing", path: "/dashboard/billing" },
+  ];
+  if (user?.role === "admin") nav.push({ icon: ShieldCheck, label: "Admin", path: "/admin" });
+
+  return (
+    <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 flex border-t border-white/10 bg-card/95 px-2 py-1.5 backdrop-blur sm:hidden">
+      {nav.map(({ icon: Icon, label, path }) => <button key={path} onClick={() => setLocation(path)} className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px] ${location === path ? "text-blue-400" : "text-muted-foreground"}`}><Icon size={16} /><span className="truncate">{label}</span></button>)}
+      <button onClick={logout} className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px] text-muted-foreground"><LogOut size={16} /><span>Exit</span></button>
+    </nav>
+  );
+}
+
 function SubscriptionBanner() {
+  const { user } = useAuth();
   const { data: sub } = trpc.subscription.get.useQuery();
   const createCheckout = trpc.subscription.createCheckout.useMutation({
     onSuccess: (data) => { if (data.url) window.open(data.url, "_blank"); },
     onError: (err) => toast.error(err.message),
   });
 
-  if (!sub || sub.status === "active" || sub.status === "trialing") return null;
+  if (user?.supportView || !sub || sub.status === "active" || sub.status === "trialing") return null;
 
   return (
     <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-2.5 mx-6 mt-4 text-sm">
@@ -106,12 +126,13 @@ function SubscriptionBanner() {
 }
 
 function IntegrationStatus() {
+  const { user } = useAuth();
   const { data: ghl } = trpc.ghl.getConnection.useQuery();
   const { data: gads } = trpc.googleAds.getConnection.useQuery();
   const [, setLocation] = useLocation();
 
   const bothConnected = ghl?.isConnected && gads?.isConnected;
-  if (bothConnected) return null;
+  if (user?.supportView || bothConnected) return null;
 
   return (
     <div className="flex items-center gap-3 bg-blue-500/8 border border-blue-500/20 rounded-lg px-4 py-2.5 mx-6 mt-3 text-sm">
@@ -175,11 +196,13 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex min-w-0 flex-col pb-16 sm:pb-0">
+        <SupportViewBanner />
         <SubscriptionBanner />
         <IntegrationStatus />
         <Home />
       </div>
+      <MobileNavigation />
     </div>
   );
 }
