@@ -107,7 +107,7 @@
 - [x] Assign a unique 7-digit Customer ID to every existing and newly created tenant account
 - [x] Add admin-only Customer ID lookup and safe account-verification details
 - [x] Display the Customer ID in the customer workspace and protected admin agency views
-- [ ] Add collision-handling regression coverage for Customer ID uniqueness
+- [x] Add collision-handling regression coverage for Customer ID uniqueness
 - [ ] Verify the Customer ID support verification dialog on a mobile viewport
 
 ## Customer Settings
@@ -122,6 +122,7 @@
 - [x] Fix desktop sidebar profile and navigation overlap
 - [x] Directly verify desktop sidebar behavior after the layout fix
 - [ ] Directly verify mobile bottom-navigation behavior in an interactive mobile browser viewport
+- [x] Diagnose and resolve the reported post-push dashboard layout regression in the current build
 
 ## Deployment Follow-Up
 - [x] Publish the latest checkpoint to the live domain
