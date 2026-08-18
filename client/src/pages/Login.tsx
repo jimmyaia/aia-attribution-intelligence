@@ -16,9 +16,9 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const login = trpc.auth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: data => {
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(data.accountLocked ? "/account-locked" : "/dashboard");
     },
     onError: (err) => {
       setError(err.message || "Invalid email or password.");

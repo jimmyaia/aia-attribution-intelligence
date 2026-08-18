@@ -86,6 +86,24 @@
 - [x] Create the requested master administrator account
 - [x] Verify the master account password and protected admin access end to end
 
+## Subscription Access Control
+- [x] Define eligible payment states and grace-period behavior for customer login access
+- [x] Enforce server-side access locks for inactive, unpaid, or canceled customer subscriptions
+- [x] Build a locked-account screen with a secure payment reactivation path
+- [x] Add admin subscription status visibility and controlled access-restore action
+- [x] Add subscription-lock and reactivation regression coverage
+- [ ] Complete a live Stripe payment and reactivation smoke test with a non-admin customer account
+
+## Support Impersonation
+- [ ] Add admin-only client-view session controls with a clear exit path
+- [ ] Record support-view audit events without exposing client credentials or API keys
+- [ ] Add a persistent support-mode indicator and restrict sensitive actions while viewing as a client
+- [ ] Add authorization and lifecycle regression tests for client-view sessions
+- [ ] Verify start, client view, and exit flows on desktop and mobile
+
+## Deployment Follow-Up
+- [ ] Publish the latest checkpoint so the live domain serves the Admin Control Center route
+
 ## Codebase Cleanup Audit
 - [x] Audit and remove clearly unused or abandoned application code, files, and routes
 - [x] Fix verified broken-code findings and add regression coverage where appropriate

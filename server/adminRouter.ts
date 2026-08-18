@@ -36,6 +36,7 @@ function normalizeAgencyRows(
     onboardingStatus: string;
     onboardingNotes: string | null;
     onboardingUpdatedAt: Date | null;
+    billingAccessOverrideUntil: Date | null;
     createdAt: Date;
     lastSignedIn: Date;
     subscriptionStatus: string | null;
@@ -82,6 +83,7 @@ function normalizeAgencyRows(
     onboardingStatus: row.onboardingStatus as OnboardingStatus,
     onboardingNotes: row.onboardingNotes,
     onboardingUpdatedAt: row.onboardingUpdatedAt,
+    billingAccessOverrideUntil: row.billingAccessOverrideUntil,
     createdAt: row.createdAt,
     lastSignedIn: row.lastSignedIn,
     subscription: {
@@ -123,6 +125,7 @@ async function loadAgencies() {
       onboardingStatus: users.onboardingStatus,
       onboardingNotes: users.onboardingNotes,
       onboardingUpdatedAt: users.onboardingUpdatedAt,
+      billingAccessOverrideUntil: users.billingAccessOverrideUntil,
       createdAt: users.createdAt,
       lastSignedIn: users.lastSignedIn,
       subscriptionStatus: subscriptions.status,
@@ -274,6 +277,30 @@ export const adminRouter = router({
       const passwordHash = await bcrypt.hash(input.temporaryPassword, 12);
 
       await db.update(users).set({ passwordHash }).where(eq(users.id, input.userId));
+      return { success: true };
+    }),
+
+  grantBillingAccess: adminProcedure
+    .input(z.object({ userId: z.number().int().positive(), days: z.number().int().min(1).max(30) }))
+    .mutation(async ({ input }) => {
+      const agency = await getUserById(input.userId);
+      if (!agency) throw new TRPCError({ code: "NOT_FOUND", message: "Agency not found" });
+      if (agency.role === "admin") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Administrators do not require a billing access override." });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const billingAccessOverrideUntil = new Date(Date.now() + input.days * 24 * 60 * 60 * 1000);
+      await db.update(users).set({ billingAccessOverrideUntil }).where(eq(users.id, input.userId));
+      return { success: true, billingAccessOverrideUntil };
+    }),
+
+  clearBillingAccessOverride: adminProcedure
+    .input(z.object({ userId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await db.update(users).set({ billingAccessOverrideUntil: null }).where(eq(users.id, input.userId));
       return { success: true };
     }),
 });

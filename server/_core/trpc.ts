@@ -1,6 +1,7 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
+import { NOT_ADMIN_ERR_MSG, PAYMENT_REQUIRED_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
+import { getBillingAccessForUser } from "../subscriptionAccess";
 import type { TrpcContext } from "./context";
 
 const t = initTRPC.context<TrpcContext>().create({
@@ -26,6 +27,22 @@ const requireUser = t.middleware(async opts => {
 });
 
 export const protectedProcedure = t.procedure.use(requireUser);
+
+export const paymentRecoveryProcedure = protectedProcedure;
+
+export const subscriptionAccessProcedure = paymentRecoveryProcedure.use(
+  t.middleware(async opts => {
+    const user = opts.ctx.user;
+    if (!user) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    }
+    const access = await getBillingAccessForUser(user);
+    if (!access.allowed) {
+      throw new TRPCError({ code: "FORBIDDEN", message: PAYMENT_REQUIRED_ERR_MSG });
+    }
+    return opts.next();
+  }),
+);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {

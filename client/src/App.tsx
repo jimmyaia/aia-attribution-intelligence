@@ -13,6 +13,7 @@ import Onboarding from "./pages/Onboarding";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
+import AccountLocked from "./pages/AccountLocked";
 import { useAuth } from "./_core/hooks/useAuth";
 import { trpc } from "./lib/trpc";
 import { useEffect } from "react";
@@ -21,21 +22,28 @@ import { useEffect } from "react";
 function PostLoginRedirect() {
   const { user, loading } = useAuth();
   const [location, setLocation] = useLocation();
-  const profileQuery = trpc.user.getProfile.useQuery(undefined, {
+  const accessQuery = trpc.subscription.getAccess.useQuery(undefined, {
     enabled: !!user && !loading,
+  });
+  const profileQuery = trpc.user.getProfile.useQuery(undefined, {
+    enabled: !!user && !loading && Boolean(accessQuery.data?.allowed),
   });
 
   useEffect(() => {
-    if (loading || profileQuery.isLoading) return;
+    if (loading || profileQuery.isLoading || accessQuery.isLoading) return;
     if (!user) return;
     // Only redirect to onboarding when the user navigates to the dashboard
     // Never redirect on public pages (/, /pricing, /onboarding)
-    const publicRoutes = ["/", "/pricing", "/onboarding", "/register", "/login", "/404"];
-    if (publicRoutes.includes(location)) return;
+    const recoveryRoutes = ["/", "/pricing", "/onboarding", "/register", "/login", "/account-locked", "/dashboard/billing", "/404"];
+    if (!accessQuery.data?.allowed && !recoveryRoutes.includes(location)) {
+      setLocation("/account-locked");
+      return;
+    }
+    if (recoveryRoutes.includes(location)) return;
     if (profileQuery.data && !profileQuery.data.profileComplete) {
       setLocation("/onboarding");
     }
-  }, [user, loading, profileQuery.data, profileQuery.isLoading, location, setLocation]);
+  }, [user, loading, profileQuery.data, profileQuery.isLoading, accessQuery.data, accessQuery.isLoading, location, setLocation]);
 
   return null;
 }
@@ -50,6 +58,7 @@ function Router() {
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/register" component={Register} />
         <Route path="/login" component={Login} />
+        <Route path="/account-locked" component={AccountLocked} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/dashboard/integrations" component={Integrations} />
         <Route path="/dashboard/billing" component={Billing} />

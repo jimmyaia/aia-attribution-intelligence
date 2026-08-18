@@ -14,6 +14,7 @@ import { trpc } from "@/lib/trpc";
 import {
   ArrowLeft,
   Check,
+  CheckCircle2,
   ChevronRight,
   CircleAlert,
   CircleCheck,
@@ -49,6 +50,7 @@ type Agency = {
   onboardingStatus: OnboardingStatus;
   onboardingNotes: string | null;
   onboardingUpdatedAt: Date | string | null;
+  billingAccessOverrideUntil: Date | string | null;
   createdAt: Date | string;
   lastSignedIn: Date | string;
   subscription: {
@@ -169,6 +171,30 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
     onError: error => toast.error(error.message),
   });
 
+  const grantBillingAccess = trpc.admin.grantBillingAccess.useMutation({
+    onSuccess: async data => {
+      await Promise.all([
+        utils.admin.overview.invalidate(),
+        utils.admin.listAgencies.invalidate(),
+        utils.admin.getAgency.invalidate({ userId: agency.id }),
+      ]);
+      toast.success(`Billing access restored until ${formatDate(data.billingAccessOverrideUntil)}`);
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  const clearBillingAccess = trpc.admin.clearBillingAccessOverride.useMutation({
+    onSuccess: async () => {
+      await Promise.all([
+        utils.admin.overview.invalidate(),
+        utils.admin.listAgencies.invalidate(),
+        utils.admin.getAgency.invalidate({ userId: agency.id }),
+      ]);
+      toast.success("Temporary billing access removed");
+    },
+    onError: error => toast.error(error.message),
+  });
+
   const checklist = [
     { label: "Account created", complete: true },
     { label: "Subscription active", complete: isActiveSubscription(agency.subscription.status) },
@@ -177,6 +203,10 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
     { label: "Onboarding approved", complete: agency.onboardingStatus === "complete" },
   ];
   const completedSteps = checklist.filter(step => step.complete).length;
+  const billingOverrideIsActive = Boolean(
+    agency.billingAccessOverrideUntil && new Date(agency.billingAccessOverrideUntil).getTime() > Date.now(),
+  );
+  const shouldOfferBillingRestore = agency.role !== "admin" && !isActiveSubscription(agency.subscription.status);
 
   return (
     <div className="flex min-w-0 flex-1 flex-col bg-background">
@@ -261,6 +291,29 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
                 Save onboarding status
               </Button>
             </div>
+          </section>
+
+          <section className="rounded-xl border border-white/8 bg-card p-5">
+            <div className="flex items-center gap-2"><CreditCard size={15} className="text-blue-400" /><p className="text-sm font-semibold text-foreground">Billing access</p></div>
+            {billingOverrideIsActive ? (
+              <>
+                <p className="mt-2 text-xs leading-5 text-emerald-300">Temporary workspace access is active until {formatDate(agency.billingAccessOverrideUntil)}.</p>
+                <Button variant="outline" className="mt-4 w-full border-amber-500/30 text-amber-300 hover:bg-amber-500/10" disabled={clearBillingAccess.isPending} onClick={() => clearBillingAccess.mutate({ userId: agency.id })}>
+                  {clearBillingAccess.isPending ? <Loader2 className="animate-spin" /> : <CircleAlert />}
+                  End temporary access
+                </Button>
+              </>
+            ) : shouldOfferBillingRestore ? (
+              <>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">This agency is not currently active. Grant a short support window without changing its Stripe subscription.</p>
+                <Button variant="outline" className="mt-4 w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/10" disabled={grantBillingAccess.isPending} onClick={() => grantBillingAccess.mutate({ userId: agency.id, days: 7 })}>
+                  {grantBillingAccess.isPending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                  Restore access for 7 days
+                </Button>
+              </>
+            ) : (
+              <p className="mt-2 text-xs leading-5 text-emerald-300">Subscription access is active. No temporary override is needed.</p>
+            )}
           </section>
 
           <section className="rounded-xl border border-white/8 bg-card p-5">

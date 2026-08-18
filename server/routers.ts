@@ -6,7 +6,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { paymentRecoveryProcedure, protectedProcedure, publicProcedure, router, subscriptionAccessProcedure } from "./_core/trpc";
 import { getDb, getUserByEmail, createEmailUser } from "./db";
 import { sdk } from "./_core/sdk";
 import {
@@ -17,6 +17,7 @@ import {
 } from "../drizzle/schema";
 import { PLANS } from "./products";
 import { adminRouter } from "./adminRouter";
+import { getBillingAccessForUser } from "./subscriptionAccess";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
   apiVersion: "2026-06-24.dahlia",
@@ -115,6 +116,7 @@ export const appRouter = router({
             message: "Invalid email or password.",
           });
         }
+        const billingAccess = await getBillingAccessForUser(user);
         // Update last signed in
         const db = await getDb();
         if (db) {
@@ -128,7 +130,7 @@ export const appRouter = router({
           ...cookieOptions,
           maxAge: 365 * 24 * 60 * 60 * 1000,
         });
-        return { success: true, userId: user.id };
+        return { success: true, userId: user.id, accountLocked: !billingAccess.allowed };
       }),
 
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -140,7 +142,7 @@ export const appRouter = router({
 
   // ── User / Profile ────────────────────────────────────────────────────────
   user: router({
-    updateAgencyName: protectedProcedure
+    updateAgencyName: subscriptionAccessProcedure
       .input(z.object({ agencyName: z.string().min(1).max(255) }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -152,7 +154,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    getProfile: protectedProcedure.query(async ({ ctx }) => {
+    getProfile: subscriptionAccessProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       const [user] = await db
@@ -163,7 +165,7 @@ export const appRouter = router({
       return user ?? null;
     }),
 
-    saveProfile: protectedProcedure
+    saveProfile: subscriptionAccessProcedure
       .input(
         z.object({
           firstName: z.string().min(1).max(128),
@@ -196,7 +198,9 @@ export const appRouter = router({
 
   // ── Subscription ──────────────────────────────────────────────────────────
   subscription: router({
-    get: protectedProcedure.query(async ({ ctx }) => {
+    getAccess: protectedProcedure.query(async ({ ctx }) => getBillingAccessForUser(ctx.user)),
+
+    get: paymentRecoveryProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       const [sub] = await db
@@ -207,7 +211,7 @@ export const appRouter = router({
       return sub ?? null;
     }),
 
-    createCheckout: protectedProcedure
+    createCheckout: paymentRecoveryProcedure
       .input(z.object({ origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
         const customerId = await getOrCreateStripeCustomer(
@@ -247,7 +251,7 @@ export const appRouter = router({
         return { url: session.url };
       }),
 
-    createPortal: protectedProcedure
+    createPortal: paymentRecoveryProcedure
       .input(z.object({ origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -271,7 +275,7 @@ export const appRouter = router({
 
   // ── Google Ads Connection ─────────────────────────────────────────────────
   googleAds: router({
-    getAuthorizeUrl: protectedProcedure
+    getAuthorizeUrl: subscriptionAccessProcedure
       .input(z.object({ origin: z.string().url() }))
       .query(({ ctx, input }) => {
         const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -299,7 +303,7 @@ export const appRouter = router({
         };
       }),
 
-    getConnection: protectedProcedure.query(async ({ ctx }) => {
+    getConnection: subscriptionAccessProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       const [conn] = await db
@@ -317,7 +321,7 @@ export const appRouter = router({
       return conn ?? null;
     }),
 
-    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
+    disconnect: subscriptionAccessProcedure.mutation(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       await db
@@ -337,7 +341,7 @@ export const appRouter = router({
 
   // ── GoHighLevel Connection ────────────────────────────────────────────────
   ghl: router({
-    getConnection: protectedProcedure.query(async ({ ctx }) => {
+    getConnection: subscriptionAccessProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       const [conn] = await db
@@ -354,7 +358,7 @@ export const appRouter = router({
       return conn ?? null;
     }),
 
-    saveApiKey: protectedProcedure
+    saveApiKey: subscriptionAccessProcedure
       .input(
         z.object({
           apiKey: z.string().min(10, "API key is too short"),
@@ -412,10 +416,10 @@ export const appRouter = router({
           });
         }
 
-        return { success: true, locationName, locationId };
-      }),
+      return { success: true, locationName, locationId };
+    }),
 
-    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
+    disconnect: subscriptionAccessProcedure.mutation(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       await db

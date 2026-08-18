@@ -26,6 +26,7 @@ export const users = mysqlTable("users", {
     .notNull(),
   onboardingNotes: text("onboardingNotes"),
   onboardingUpdatedAt: timestamp("onboardingUpdatedAt"),
+  billingAccessOverrideUntil: timestamp("billingAccessOverrideUntil"),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

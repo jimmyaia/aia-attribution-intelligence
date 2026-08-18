@@ -29,6 +29,13 @@
       "when": 1787068216900,
       "tag": "0003_true_hedge_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787070070986,
+      "tag": "0004_rich_barracuda",
+      "breakpoints": true
     }
   ]
 }
