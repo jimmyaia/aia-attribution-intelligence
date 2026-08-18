@@ -11,6 +11,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "./db";
 import { googleAdsConnections } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
+import { encryptConnectionToken } from "./tokenEncryption";
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -185,8 +186,8 @@ export function registerGoogleAdsOAuthRoutes(app: Express) {
       await db
         .update(googleAdsConnections)
         .set({
-          accessToken,
-          refreshToken: refreshToken ?? null,
+          accessToken: encryptConnectionToken(accessToken),
+          refreshToken: refreshToken ? encryptConnectionToken(refreshToken) : null,
           tokenExpiresAt: expiresAt,
           googleEmail,
           googleAccountId,
@@ -198,8 +199,8 @@ export function registerGoogleAdsOAuthRoutes(app: Express) {
     } else {
       await db.insert(googleAdsConnections).values({
         userId,
-        accessToken,
-        refreshToken: refreshToken ?? null,
+        accessToken: encryptConnectionToken(accessToken),
+        refreshToken: refreshToken ? encryptConnectionToken(refreshToken) : null,
         tokenExpiresAt: expiresAt,
         googleEmail,
         googleAccountId,

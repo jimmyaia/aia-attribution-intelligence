@@ -20,7 +20,7 @@
 
 ## Phase 4: Google Ads OAuth
 - [x] Google OAuth 2.0 flow (authorize → callback → store tokens)
-- [ ] Store encrypted access_token + refresh_token in DB per user
+- [x] Store encrypted access_token + refresh_token in DB per user
 - [x] Show connected Google Ads account name + customer ID in Integrations page
 - [x] Disconnect / reconnect button
 
