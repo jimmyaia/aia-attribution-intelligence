@@ -117,6 +117,11 @@
 - [x] Add a secure current-password and new-password change flow
 - [ ] Complete end-to-end profile-image, password-change, and blocked-Client-View settings checks
 
+## Dashboard Layout Regression
+- [x] Fix desktop sidebar profile and navigation overlap
+- [x] Directly verify desktop sidebar behavior after the layout fix
+- [ ] Directly verify mobile bottom-navigation behavior in an interactive mobile browser viewport
+
 ## Deployment Follow-Up
 - [x] Publish the latest checkpoint to the live domain
 - [ ] Verify the live Admin Control Center and customer Settings routes after deployment

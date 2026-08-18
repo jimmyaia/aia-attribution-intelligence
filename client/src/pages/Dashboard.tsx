@@ -26,7 +26,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden w-56 flex-shrink-0 border-r border-white/8 bg-card sm:flex sm:h-screen sm:sticky sm:top-0">
+    <aside className="hidden w-56 flex-shrink-0 flex-col border-r border-white/8 bg-card sm:flex sm:h-screen sm:sticky sm:top-0">
       <div className="h-14 flex items-center justify-center gap-2.5 px-3 sm:justify-start sm:px-4 border-b border-white/8">
         <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={12} className="text-blue-400" />
