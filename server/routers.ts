@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -100,11 +101,17 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const user = await getUserByEmail(input.email);
         if (!user || !user.passwordHash) {
-          throw new Error("Invalid email or password.");
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password.",
+          });
         }
         const valid = await bcrypt.compare(input.password, user.passwordHash);
         if (!valid) {
-          throw new Error("Invalid email or password.");
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password.",
+          });
         }
         // Update last signed in
         const db = await getDb();

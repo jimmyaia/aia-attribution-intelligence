@@ -68,3 +68,10 @@
 
 ## Project Backup
 - [x] Create a private GitHub repository backup of the current AIA Attribution Intelligence source code
+- [x] Create a downloadable ZIP archive backup of the current project source code
+
+## Codebase Cleanup Audit
+- [x] Audit and remove clearly unused or abandoned application code, files, and routes
+- [x] Fix verified broken-code findings and add regression coverage where appropriate
+- [x] Run TypeScript checks, tests, production build, and route verification after cleanup
+- [x] Verify protected dashboard routes render correctly after cleanup
