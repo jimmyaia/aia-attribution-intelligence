@@ -39,6 +39,7 @@ type OnboardingStatus = "not_started" | "invited" | "in_progress" | "ready" | "c
 
 type Agency = {
   id: number;
+  customerId: string | null;
   name: string | null;
   email: string | null;
   agencyName: string | null;
@@ -146,11 +147,18 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
   const [status, setStatus] = useState<OnboardingStatus>(agency.onboardingStatus);
   const [notes, setNotes] = useState(agency.onboardingNotes ?? "");
   const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [customerIdInput, setCustomerIdInput] = useState("");
+  const [verification, setVerification] = useState("");
+  const [supportReason, setSupportReason] = useState("Support review from Admin Control Center");
 
   useEffect(() => {
     setStatus(agency.onboardingStatus);
     setNotes(agency.onboardingNotes ?? "");
     setTemporaryPassword("");
+    setCustomerIdInput("");
+    setVerification("");
+    setSupportReason("Support review from Admin Control Center");
   }, [agency]);
 
   const updateOnboarding = trpc.admin.updateOnboarding.useMutation({
@@ -200,6 +208,7 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
   const startClientView = trpc.support.start.useMutation({
     onSuccess: async data => {
       await utils.auth.me.invalidate();
+      setSupportOpen(false);
       toast.success(`Viewing ${data.targetName ?? "client workspace"} in read-only mode`);
       setLocation("/dashboard");
     },
@@ -220,6 +229,7 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
   const shouldOfferBillingRestore = agency.role !== "admin" && !isActiveSubscription(agency.subscription.status);
 
   return (
+    <>
     <div className="flex min-w-0 flex-1 flex-col bg-background">
       <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
         <div className="min-w-0">
@@ -231,7 +241,7 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {agency.role !== "admin" && (
-            <Button size="sm" variant="outline" className="border-amber-500/30 text-amber-200 hover:bg-amber-500/10" onClick={() => startClientView.mutate({ targetUserId: agency.id, reason: "Support review from Admin Control Center" })} disabled={startClientView.isPending}>
+            <Button size="sm" variant="outline" className="border-amber-500/30 text-amber-200 hover:bg-amber-500/10" onClick={() => setSupportOpen(true)} disabled={startClientView.isPending}>
               {startClientView.isPending ? <Loader2 className="animate-spin" /> : <Eye />}
               View as client
             </Button>
@@ -281,6 +291,7 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
           <section className="rounded-xl border border-white/8 bg-card p-5">
             <p className="text-sm font-semibold text-foreground">Agency context</p>
             <dl className="mt-4 grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
+              <div><dt className="text-xs text-muted-foreground">Customer ID</dt><dd className="mt-1 font-mono font-semibold tracking-[0.18em] text-blue-300">{agency.customerId ?? "Assigning…"}</dd></div>
               <div><dt className="text-xs text-muted-foreground">Primary contact</dt><dd className="mt-1 text-foreground">{agency.name || "—"}</dd></div>
               <div><dt className="text-xs text-muted-foreground">Phone</dt><dd className="mt-1 text-foreground">{agency.phone || "—"}</dd></div>
               <div><dt className="text-xs text-muted-foreground">Website</dt><dd className="mt-1 truncate text-foreground">{agency.website || "—"}</dd></div>
@@ -349,6 +360,26 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
         </aside>
       </div>
     </div>
+    <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Verify customer before Client View</DialogTitle>
+          <DialogDescription>Ask the caller for their seven-digit Customer ID and either their account email or the last four digits of their phone number.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <div className="space-y-2"><Label htmlFor="support-customer-id">Customer ID</Label><Input id="support-customer-id" inputMode="numeric" maxLength={7} placeholder="7-digit ID from caller" value={customerIdInput} onChange={event => setCustomerIdInput(event.target.value.replace(/\D/g, "").slice(0, 7))} /></div>
+          <div className="space-y-2"><Label htmlFor="support-verification">Email or phone last four</Label><Input id="support-verification" placeholder="name@agency.com or 1234" value={verification} onChange={event => setVerification(event.target.value)} /></div>
+          <div className="space-y-2"><Label htmlFor="support-reason">Support note</Label><Input id="support-reason" value={supportReason} onChange={event => setSupportReason(event.target.value)} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setSupportOpen(false)}>Cancel</Button>
+          <Button disabled={customerIdInput.length !== 7 || verification.trim().length < 4 || supportReason.trim().length < 3 || startClientView.isPending} onClick={() => startClientView.mutate({ targetUserId: agency.id, customerId: customerIdInput, verification, reason: supportReason })}>
+            {startClientView.isPending ? <Loader2 className="animate-spin" /> : <Eye />} Verify & view client
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
@@ -459,7 +490,7 @@ export default function Admin() {
             <section className="overflow-hidden rounded-xl border border-white/8 bg-card">
               <div className="flex flex-col gap-3 border-b border-white/8 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div><h2 className="text-base font-semibold text-foreground">Agency directory</h2><p className="mt-1 text-xs text-muted-foreground">Review setup health, subscriptions, and next actions in one place.</p></div>
-                <div className="relative w-full sm:w-72"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} /><Input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search agencies or email" className="pl-9" /></div>
+                <div className="relative w-full sm:w-72"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} /><Input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search agency, email, or Customer ID" className="pl-9" /></div>
               </div>
 
               {isLoading ? (

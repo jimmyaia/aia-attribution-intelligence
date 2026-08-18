@@ -26,6 +26,8 @@ function user(overrides: Partial<User>): User {
     passwordHash: null,
     name: "Admin",
     email: "admin@example.com",
+    customerId: "1234567",
+    profileImageUrl: null,
     agencyName: "AIA",
     firstName: "Admin",
     lastName: "User",
@@ -73,13 +75,31 @@ describe("Client View authorization", () => {
       res: {} as TrpcContext["res"],
     });
 
-    await expect(caller.support.start({ targetUserId: 9, reason: "Support review" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.support.start({ targetUserId: 9, customerId: "7654321", verification: "admin@example.com", reason: "Support review" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("requires the Customer ID and a matching email or phone factor before Client View", async () => {
+    dbMocks.getUserById.mockResolvedValueOnce(user({ id: 9, role: "user", customerId: "7654321", email: "client@example.com", phone: "555-010-4321" }));
+    const actor = user({ id: 1, role: "admin" });
+    const caller = appRouter.createCaller({
+      user: actor,
+      actor,
+      supportView: null,
+      req: { protocol: "https", headers: {} } as TrpcContext["req"],
+      res: {} as TrpcContext["res"],
+    });
+
+    await expect(caller.support.start({ targetUserId: 9, customerId: "7654321", verification: "wrong@example.com", reason: "Support review" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("blocks customer mutations while Client View is active", async () => {
     const caller = appRouter.createCaller(supportContext());
 
     await expect(caller.user.saveProfile({ firstName: "Client", lastName: "User", businessName: "Client Co" })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Client View is read-only. Exit Client View to make changes.",
+    });
+    await expect(caller.user.changePassword({ currentPassword: "old-password", newPassword: "new-password" })).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "Client View is read-only. Exit Client View to make changes.",
     });

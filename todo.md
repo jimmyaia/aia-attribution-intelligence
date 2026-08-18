@@ -19,10 +19,10 @@
 - [x] Integrations page — Google Ads OAuth placeholder + GHL API key form
 
 ## Phase 4: Google Ads OAuth
-- [ ] Google OAuth 2.0 flow (authorize → callback → store tokens)
+- [x] Google OAuth 2.0 flow (authorize → callback → store tokens)
 - [ ] Store encrypted access_token + refresh_token in DB per user
-- [ ] Show connected Google Ads account name + customer ID in Integrations page
-- [ ] Disconnect / reconnect button
+- [x] Show connected Google Ads account name + customer ID in Integrations page
+- [x] Disconnect / reconnect button
 
 ## Phase 5: GoHighLevel API Key
 - [x] GHL API key input form in Integrations page
@@ -51,10 +51,11 @@
 - [x] Fix post-login redirect to check profile completeness and route accordingly
 
 ## Phase 9: Google Ads OAuth
-- [ ] Implement Google Ads OAuth 2.0 authorize URL endpoint
-- [ ] Implement Google Ads OAuth callback handler (exchange code, store tokens)
-- [ ] Show connected Google Ads account info in Integrations page
-- [ ] Google Ads disconnect/reconnect button
+- [x] Implement Google Ads OAuth 2.0 authorize URL endpoint
+- [x] Implement Google Ads OAuth callback handler (exchange code, store tokens)
+- [x] Show connected Google Ads account info in Integrations page
+- [x] Google Ads disconnect/reconnect button
+- [ ] Configure Google OAuth client credentials and Google Ads developer token for live activation
 
 ## Phase 10: Date Range Picker + Admin Panel
 - [x] Add date range picker to dashboard header (Last 7/30 days, custom range)
@@ -100,6 +101,20 @@
 - [x] Add a persistent support-mode indicator and restrict sensitive actions while viewing as a client
 - [x] Add authorization and lifecycle regression tests for client-view sessions
 - [x] Verify start, client view, and exit flows on desktop and mobile
+
+## Customer ID Support Verification
+- [x] Assign a unique 7-digit Customer ID to every existing and newly created tenant account
+- [x] Add admin-only Customer ID lookup and safe account-verification details
+- [x] Display the Customer ID in the customer workspace and protected admin agency views
+- [ ] Add collision-handling regression coverage for Customer ID uniqueness
+- [ ] Verify the Customer ID support verification dialog on a mobile viewport
+
+## Customer Settings
+- [x] Replace the dashboard connection prompt with a Settings entry point
+- [x] Add a customer settings page with profile image upload backed by secure file storage
+- [x] Show the logged-in tenant’s 7-digit Customer ID in settings
+- [x] Add a secure current-password and new-password change flow
+- [ ] Complete end-to-end profile-image, password-change, and blocked-Client-View settings checks
 
 ## Deployment Follow-Up
 - [ ] Publish the latest checkpoint so the live domain serves the Admin Control Center route

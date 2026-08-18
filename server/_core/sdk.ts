@@ -385,6 +385,12 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
+    if (!user.customerId) {
+      await db.assignCustomerId(user.id);
+      user = await db.getUserById(user.id);
+      if (!user) throw ForbiddenError("User not found after Customer ID assignment");
+    }
+
     // Only update lastSignedIn for Manus OAuth users (email users update on login)
     if (user.openId) {
       await db.upsertUser({

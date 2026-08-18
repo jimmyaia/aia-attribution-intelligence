@@ -18,6 +18,7 @@ import {
 import { PLANS } from "./products";
 import { adminRouter } from "./adminRouter";
 import { getBillingAccessForUser } from "./subscriptionAccess";
+import { storagePut } from "./storage";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
   apiVersion: "2026-06-24.dahlia",
@@ -47,6 +48,17 @@ async function getOrCreateStripeCustomer(
   });
 
   return customer.id;
+}
+
+function parseProfileImage(dataUrl: string) {
+  const match = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+  if (!match) throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a PNG, JPEG, or WebP image." });
+  const buffer = Buffer.from(match[2], "base64");
+  if (!buffer.length || buffer.length > 2 * 1024 * 1024) {
+    throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: "Profile images must be 2 MB or smaller." });
+  }
+  const extension = match[1] === "image/png" ? "png" : match[1] === "image/webp" ? "webp" : "jpg";
+  return { buffer, contentType: match[1], extension };
 }
 
 // ─── App Router ───────────────────────────────────────────────────────────────
@@ -157,12 +169,23 @@ export const appRouter = router({
 
   support: router({
     start: adminProcedure
-      .input(z.object({ targetUserId: z.number().int().positive(), reason: z.string().trim().min(3).max(255).default("Support review") }))
+      .input(z.object({
+        targetUserId: z.number().int().positive(),
+        customerId: z.string().regex(/^\d{7}$/, "Enter the seven-digit Customer ID."),
+        verification: z.string().trim().min(4).max(320),
+        reason: z.string().trim().min(3).max(255).default("Support review"),
+      }))
       .mutation(async ({ ctx, input }) => {
         const target = await getUserById(input.targetUserId);
         if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Client account not found" });
         if (target.role === "admin" || target.id === ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Client View is only available for customer accounts." });
+        }
+        const emailMatches = Boolean(target.email && target.email.toLowerCase() === input.verification.toLowerCase());
+        const phoneLastFour = target.phone?.replace(/\D/g, "").slice(-4);
+        const phoneMatches = Boolean(phoneLastFour && input.verification.replace(/\D/g, "").slice(-4) === phoneLastFour);
+        if (target.customerId !== input.customerId || (!emailMatches && !phoneMatches)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Customer verification did not match this account." });
         }
         await endActiveSupportViewSessionsForAdmin(ctx.user.id);
         const expiresInMs = 60 * 60 * 1000;
@@ -247,6 +270,33 @@ export const appRouter = router({
             profileComplete: true,
           })
           .where(eq(users.id, ctx.user.id));
+        return { success: true };
+      }),
+
+    uploadProfileImage: paymentRecoveryWriteProcedure
+      .input(z.object({ dataUrl: z.string().max(3_000_000) }))
+      .mutation(async ({ ctx, input }) => {
+        const { buffer, contentType, extension } = parseProfileImage(input.dataUrl);
+        const stored = await storagePut(`profile-images/${ctx.user.id}/avatar.${extension}`, buffer, contentType);
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.update(users).set({ profileImageUrl: stored.url }).where(eq(users.id, ctx.user.id));
+        return { success: true, profileImageUrl: stored.url };
+      }),
+
+    changePassword: paymentRecoveryWriteProcedure
+      .input(z.object({ currentPassword: z.string().min(1).max(128), newPassword: z.string().min(8).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        const account = await getUserById(ctx.user.id);
+        if (!account?.passwordHash) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Password changes are only available for email-password accounts." });
+        }
+        const currentMatches = await bcrypt.compare(input.currentPassword, account.passwordHash);
+        if (!currentMatches) throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect." });
+        const passwordHash = await bcrypt.hash(input.newPassword, 12);
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.update(users).set({ passwordHash }).where(eq(users.id, ctx.user.id));
         return { success: true };
       }),
   }),

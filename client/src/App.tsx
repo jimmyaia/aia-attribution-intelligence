@@ -14,6 +14,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import AccountLocked from "./pages/AccountLocked";
+import Settings from "./pages/Settings";
 import { useAuth } from "./_core/hooks/useAuth";
 import { trpc } from "./lib/trpc";
 import { useEffect } from "react";
@@ -35,7 +36,7 @@ function PostLoginRedirect() {
     if (user.supportView) return;
     // Only redirect to onboarding when the user navigates to the dashboard
     // Never redirect on public pages (/, /pricing, /onboarding)
-    const recoveryRoutes = ["/", "/pricing", "/onboarding", "/register", "/login", "/account-locked", "/dashboard/billing", "/404"];
+    const recoveryRoutes = ["/", "/pricing", "/onboarding", "/register", "/login", "/account-locked", "/dashboard/billing", "/dashboard/settings", "/404"];
     if (!accessQuery.data?.allowed && !recoveryRoutes.includes(location)) {
       setLocation("/account-locked");
       return;
@@ -63,6 +64,7 @@ function Router() {
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/dashboard/integrations" component={Integrations} />
         <Route path="/dashboard/billing" component={Billing} />
+        <Route path="/dashboard/settings" component={Settings} />
         <Route path="/admin" component={Admin} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />

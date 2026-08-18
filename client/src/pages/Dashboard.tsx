@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import {
-  Zap, BarChart2, CreditCard, LogOut,
+  Zap, BarChart2, CreditCard, LogOut, Settings,
   AlertCircle, Link2, ShieldCheck,
 } from "lucide-react";
 import Home from "./Home";
@@ -19,6 +19,7 @@ export function Sidebar() {
     { icon: BarChart2, label: "Attribution Report", path: "/dashboard" },
     { icon: Link2, label: "Integrations", path: "/dashboard/integrations" },
     { icon: CreditCard, label: "Billing", path: "/dashboard/billing" },
+    { icon: Settings, label: "Settings", path: "/dashboard/settings" },
   ];
   if (user?.role === "admin") {
     nav.push({ icon: ShieldCheck, label: "Admin", path: "/admin" });
@@ -54,8 +55,8 @@ export function Sidebar() {
 
       <div className="p-2 border-t border-white/8">
         <div className="flex items-center justify-center sm:justify-start gap-2.5 px-3 py-2 mb-1">
-          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-400 flex-shrink-0">
-            {user?.name?.[0]?.toUpperCase() ?? "U"}
+          <div className="w-6 h-6 overflow-hidden rounded-full bg-blue-500/20 text-[10px] font-bold text-blue-400 flex-shrink-0">
+            {user?.profileImageUrl ? <img src={user.profileImageUrl} alt="Profile" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center">{user?.name?.[0]?.toUpperCase() ?? "U"}</span>}
           </div>
           <div className="hidden sm:block min-w-0">
             <div className="text-xs font-medium text-foreground truncate">{user?.name ?? "User"}</div>
@@ -75,13 +76,14 @@ export function Sidebar() {
   );
 }
 
-function MobileNavigation() {
+export function MobileNavigation() {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const nav = [
     { icon: BarChart2, label: "Report", path: "/dashboard" },
     { icon: Link2, label: "Connect", path: "/dashboard/integrations" },
     { icon: CreditCard, label: "Billing", path: "/dashboard/billing" },
+    { icon: Settings, label: "Settings", path: "/dashboard/settings" },
   ];
   if (user?.role === "admin") nav.push({ icon: ShieldCheck, label: "Admin", path: "/admin" });
 
@@ -120,37 +122,6 @@ function SubscriptionBanner() {
         disabled={createCheckout.isPending}
       >
         Subscribe — $49/mo
-      </Button>
-    </div>
-  );
-}
-
-function IntegrationStatus() {
-  const { user } = useAuth();
-  const { data: ghl } = trpc.ghl.getConnection.useQuery();
-  const { data: gads } = trpc.googleAds.getConnection.useQuery();
-  const [, setLocation] = useLocation();
-
-  const bothConnected = ghl?.isConnected && gads?.isConnected;
-  if (user?.supportView || bothConnected) return null;
-
-  return (
-    <div className="flex items-center gap-3 bg-blue-500/8 border border-blue-500/20 rounded-lg px-4 py-2.5 mx-6 mt-3 text-sm">
-      <AlertCircle size={14} className="text-blue-400 flex-shrink-0" />
-      <span className="text-blue-300 flex-1">
-        {!gads?.isConnected && !ghl?.isConnected
-          ? "Connect Google Ads and GoHighLevel to see live data."
-          : !gads?.isConnected
-          ? "Connect your Google Ads account to see live data."
-          : "Connect your GoHighLevel account to see live data."}
-      </span>
-      <Button
-        size="sm"
-        variant="outline"
-        className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 flex-shrink-0"
-        onClick={() => setLocation("/dashboard/integrations")}
-      >
-        Connect Now
       </Button>
     </div>
   );
@@ -199,7 +170,6 @@ export default function Dashboard() {
       <div className="flex-1 flex min-w-0 flex-col pb-16 sm:pb-0">
         <SupportViewBanner />
         <SubscriptionBanner />
-        <IntegrationStatus />
         <Home />
       </div>
       <MobileNavigation />

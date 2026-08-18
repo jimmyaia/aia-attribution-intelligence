@@ -1,5 +1,6 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { randomInt } from "node:crypto";
 import { InsertUser, supportViewSessions, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -136,7 +137,40 @@ export async function createEmailUser(data: {
   });
   const created = await getUserByEmail(data.email);
   if (!created) throw new Error("Failed to create user");
-  return created;
+  await assignCustomerId(created.id);
+  return (await getUserById(created.id)) ?? created;
+}
+
+export function generateCustomerId() {
+  return randomInt(1_000_000, 10_000_000).toString();
+}
+
+export async function reserveUniqueCustomerId(
+  assign: (customerId: string) => Promise<void>,
+  generate = generateCustomerId,
+): Promise<string> {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const customerId = generate();
+    try {
+      await assign(customerId);
+      return customerId;
+    } catch (error: any) {
+      if (error?.code !== "ER_DUP_ENTRY") throw error;
+    }
+  }
+  throw new Error("Unable to assign a unique Customer ID");
+}
+
+export async function assignCustomerId(userId: number): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const existing = await getUserById(userId);
+  if (!existing) throw new Error("User not found");
+  if (existing.customerId) return existing.customerId;
+
+  return reserveUniqueCustomerId(async customerId => {
+      await db.update(users).set({ customerId }).where(eq(users.id, userId));
+  });
 }
 
 export async function createSupportViewSession(data: {

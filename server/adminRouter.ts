@@ -24,6 +24,7 @@ type OnboardingStatus = (typeof ONBOARDING_STATUSES)[number];
 function normalizeAgencyRows(
   rows: Array<{
     id: number;
+    customerId: string | null;
     name: string | null;
     email: string | null;
     agencyName: string | null;
@@ -71,6 +72,7 @@ function normalizeAgencyRows(
 
   return Array.from(agencies.values()).map(row => ({
     id: row.id,
+    customerId: row.customerId,
     name: row.name,
     email: row.email,
     agencyName: row.agencyName,
@@ -113,6 +115,7 @@ async function loadAgencies() {
   const rows = await db
     .select({
       id: users.id,
+      customerId: users.customerId,
       name: users.name,
       email: users.email,
       agencyName: users.agencyName,
@@ -173,7 +176,7 @@ export const adminRouter = router({
       if (!search) return agencies;
 
       return agencies.filter(agency =>
-        [agency.agencyName, agency.name, agency.email]
+        [agency.customerId, agency.agencyName, agency.name, agency.email]
           .filter((value): value is string => Boolean(value))
           .some(value => value.toLowerCase().includes(search)),
       );

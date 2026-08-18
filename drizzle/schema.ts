@@ -15,6 +15,8 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   name: text("name"),
   email: varchar("email", { length: 320 }).unique(),
+  customerId: varchar("customerId", { length: 7 }).unique(),
+  profileImageUrl: varchar("profileImageUrl", { length: 1024 }),
   agencyName: varchar("agencyName", { length: 255 }),
   firstName: varchar("firstName", { length: 128 }),
   lastName: varchar("lastName", { length: 128 }),
