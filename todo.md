@@ -78,10 +78,11 @@
 - [x] Add admin onboarding controls to create an agency owner and additional agency team members
 - [x] Add secure temporary credentials, role selection, and scoped sign-in for agency members
 - [x] Add an admin agency-team manager to add, reset, deactivate, and reactivate members
-- [x] Enforce agency-scoped access and block cross-agency data access for member accounts
+- [x] Enforce agency-scoped owner-only integration and billing controls for member accounts
 - [x] Add multi-user agency provisioning and deactivated-member regression coverage
 - [x] Verify agency team management on desktop and mobile
-- [ ] Complete a live secondary-user provisioning and shared-workspace smoke test with an approved team-member email
+- [x] Complete a live secondary-user provisioning and shared-workspace smoke test with an approved team-member email
+- [x] Provision the approved support team member for onetouch.media and verify scoped shared-workspace access
 
 ## Phase 11: Live Data Integration
 - [ ] Replace mock campaign data with Google Ads API calls

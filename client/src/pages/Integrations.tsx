@@ -72,9 +72,13 @@ function GoogleAdsCard() {
   const { user } = useAuth();
   const { data: conn, refetch } = trpc.googleAds.getConnection.useQuery();
   const [origin] = useState(() => window.location.origin);
+  const isReadOnly = Boolean(user?.supportView || user?.agencyMemberRole === "member");
+  const readOnlyMessage = user?.supportView
+    ? "Client View is read-only. Connection changes are disabled."
+    : "Only an agency owner can change advertising connections.";
   const { data: authData } = trpc.googleAds.getAuthorizeUrl.useQuery(
     { origin },
-    { enabled: !conn?.isConnected && !user?.supportView }
+    { enabled: !conn?.isConnected && !isReadOnly }
   );
   const disconnect = trpc.googleAds.disconnect.useMutation({
     onSuccess: () => { toast.success("Google Ads disconnected."); refetch(); },
@@ -150,8 +154,8 @@ function GoogleAdsCard() {
               <span className="text-foreground font-mono text-xs">{conn.googleAccountId ?? "—"}</span>
             </div>
           </div>
-          {user?.supportView ? (
-            <p className="text-xs text-amber-300">Client View is read-only. Connection changes are disabled.</p>
+          {isReadOnly ? (
+            <p className="text-xs text-amber-300">{readOnlyMessage}</p>
           ) : (
             <Button variant="outline" size="sm" className="gap-1.5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>
               <Unlink size={13} /> Disconnect
@@ -163,8 +167,8 @@ function GoogleAdsCard() {
           <p className="text-sm text-muted-foreground">
             Connect your Google Ads account via OAuth to pull campaign spend, clicks, impressions, and CTR data.
           </p>
-          {user?.supportView ? (
-            <p className="text-xs text-amber-300">Client View is read-only. Connection changes are disabled.</p>
+          {isReadOnly ? (
+            <p className="text-xs text-amber-300">{readOnlyMessage}</p>
           ) : authData?.configured ? (
             <Button
               variant="outline"
@@ -197,6 +201,10 @@ function GhlCard() {
   const { data: conn, refetch } = trpc.ghl.getConnection.useQuery();
   const [apiKey, setApiKey] = useState("");
   const [locationId, setLocationId] = useState("");
+  const isReadOnly = Boolean(user?.supportView || user?.agencyMemberRole === "member");
+  const readOnlyMessage = user?.supportView
+    ? "Client View is read-only. API keys and connection changes are disabled."
+    : "Only an agency owner can view connection diagnostics and change API connections.";
 
   const saveKey = trpc.ghl.saveApiKey.useMutation({
     onSuccess: (data) => {
@@ -255,7 +263,7 @@ function GhlCard() {
               </div>
             )}
           </div>
-          {user?.supportView ? <p className="text-xs text-amber-300">Client View is read-only. Connection changes are disabled.</p> : <Button variant="outline" size="sm" className="gap-1.5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}><Unlink size={13} /> Disconnect</Button>}
+          {isReadOnly ? <p className="text-xs text-amber-300">{readOnlyMessage}</p> : <Button variant="outline" size="sm" className="gap-1.5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}><Unlink size={13} /> Disconnect</Button>}
         </div>
       ) : (
         <div className="space-y-4">
@@ -267,7 +275,7 @@ function GhlCard() {
             <strong>Where to find your API key:</strong> In GoHighLevel, go to
             Settings → Integrations → API Key. Copy the key and paste it below.
           </div>
-          {!user?.supportView && <div className="space-y-3">
+          {!isReadOnly && <div className="space-y-3">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5 block">GHL API Key *</Label>
               <Input
@@ -297,7 +305,7 @@ function GhlCard() {
               {saveKey.isPending ? "Connecting..." : "Connect GoHighLevel"}
             </Button>
           </div>}
-          {user?.supportView && <p className="text-xs text-amber-300">Client View is read-only. API keys and connection changes are disabled.</p>}
+          {isReadOnly && <p className="text-xs text-amber-300">{readOnlyMessage}</p>}
         </div>
       )}
     </div>

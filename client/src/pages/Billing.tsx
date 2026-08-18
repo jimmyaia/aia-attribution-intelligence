@@ -111,6 +111,10 @@ export default function Billing() {
 
   const statusInfo = sub?.status ? STATUS_MAP[sub.status] ?? STATUS_MAP["incomplete"] : null;
   const isActive = sub?.status === "active" || sub?.status === "trialing";
+  const isReadOnly = Boolean(user.supportView || user.agencyMemberRole === "member");
+  const readOnlyMessage = user.supportView
+    ? "Client View is read-only. Billing changes are disabled while you are viewing this customer workspace."
+    : "Only an agency owner can manage billing and subscription changes.";
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -174,8 +178,8 @@ export default function Billing() {
               )}
 
               {/* Actions */}
-              {user.supportView ? (
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.07] p-3 text-xs text-amber-200">Client View is read-only. Billing changes are disabled while you are viewing this customer workspace.</div>
+              {isReadOnly ? (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.07] p-3 text-xs text-amber-200">{readOnlyMessage}</div>
               ) : <div className="flex flex-col sm:flex-row gap-3">
                 {isActive ? (
                   <Button
@@ -202,7 +206,7 @@ export default function Billing() {
                 )}
               </div>}
 
-              {!isActive && (
+              {!isActive && !isReadOnly && (
                 <div className="rounded-lg bg-blue-500/8 border border-blue-500/20 p-3 text-xs text-blue-300">
                   <strong>Test mode:</strong> Use card number{" "}
                   <span className="font-mono text-white">4242 4242 4242 4242</span> with any future
