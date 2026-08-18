@@ -123,6 +123,7 @@
 - [x] Directly verify desktop sidebar behavior after the layout fix
 - [ ] Directly verify mobile bottom-navigation behavior in an interactive mobile browser viewport
 - [x] Diagnose and resolve the reported post-push dashboard layout regression in the current build
+- [x] Fix the confirmed repeated sidebar profile/navigation overlap shown in the latest user screenshot
 
 ## Deployment Follow-Up
 - [x] Publish the latest checkpoint to the live domain

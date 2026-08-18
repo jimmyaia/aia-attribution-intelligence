@@ -26,7 +26,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden w-56 flex-shrink-0 flex-col border-r border-white/8 bg-card sm:flex sm:h-screen sm:sticky sm:top-0">
+    <aside className="hidden w-56 flex-shrink-0 border-r border-white/8 bg-card sm:sticky sm:top-0 sm:flex sm:h-screen sm:flex-col sm:overflow-hidden">
       <div className="h-14 flex items-center justify-center gap-2.5 px-3 sm:justify-start sm:px-4 border-b border-white/8">
         <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={12} className="text-blue-400" />
@@ -34,7 +34,7 @@ export function Sidebar() {
         <span className="hidden sm:inline font-bold text-xs tracking-tight truncate">AIA</span>
       </div>
 
-      <nav className="flex-1 p-2 flex flex-col gap-0.5">
+      <nav className="min-h-0 flex-1 overflow-y-auto p-2 sm:flex sm:flex-col sm:gap-0.5">
         {nav.map(({ icon: Icon, label, path }) => (
           <button
             key={path}
@@ -53,7 +53,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-2 border-t border-white/8">
+      <div className="mt-auto flex-none border-t border-white/8 p-2">
         <div className="flex items-center justify-center sm:justify-start gap-2.5 px-3 py-2 mb-1">
           <div className="w-6 h-6 overflow-hidden rounded-full bg-blue-500/20 text-[10px] font-bold text-blue-400 flex-shrink-0">
             {user?.profileImageUrl ? <img src={user.profileImageUrl} alt="Profile" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center">{user?.name?.[0]?.toUpperCase() ?? "U"}</span>}
