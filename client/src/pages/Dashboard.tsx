@@ -5,63 +5,69 @@ import { toast } from "sonner";
 import { useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import {
-  Zap, BarChart2, Settings, CreditCard, LogOut,
-  AlertCircle, CheckCircle2, Link2,
+  Zap, BarChart2, CreditCard, LogOut,
+  AlertCircle, Link2, ShieldCheck,
 } from "lucide-react";
 import Home from "./Home";
 
-function Sidebar() {
+export function Sidebar() {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
 
-  const NAV = [
+  const nav = [
     { icon: BarChart2, label: "Attribution Report", path: "/dashboard" },
     { icon: Link2, label: "Integrations", path: "/dashboard/integrations" },
     { icon: CreditCard, label: "Billing", path: "/dashboard/billing" },
   ];
+  if (user?.role === "admin") {
+    nav.push({ icon: ShieldCheck, label: "Admin", path: "/admin" });
+  }
 
   return (
-    <aside className="w-56 flex-shrink-0 border-r border-white/8 bg-card flex flex-col h-screen sticky top-0">
-      <div className="h-14 flex items-center gap-2.5 px-4 border-b border-white/8">
+    <aside className="w-[68px] sm:w-56 flex-shrink-0 border-r border-white/8 bg-card flex flex-col h-screen sticky top-0 transition-[width] duration-200">
+      <div className="h-14 flex items-center justify-center gap-2.5 px-3 sm:justify-start sm:px-4 border-b border-white/8">
         <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
           <Zap size={12} className="text-blue-400" />
         </div>
-        <span className="font-bold text-xs tracking-tight truncate">AIA</span>
+        <span className="hidden sm:inline font-bold text-xs tracking-tight truncate">AIA</span>
       </div>
 
       <nav className="flex-1 p-2 flex flex-col gap-0.5">
-        {NAV.map(({ icon: Icon, label, path }) => (
+        {nav.map(({ icon: Icon, label, path }) => (
           <button
             key={path}
             onClick={() => setLocation(path)}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
+            title={label}
+            aria-label={label}
+            className={`w-full flex justify-center sm:justify-start items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
               location === path
                 ? "bg-blue-500/15 text-blue-400 font-medium"
                 : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
             }`}
-          >
-            <Icon size={15} />
-            {label}
+            >
+              <Icon size={15} />
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </nav>
 
       <div className="p-2 border-t border-white/8">
-        <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
+        <div className="flex items-center justify-center sm:justify-start gap-2.5 px-3 py-2 mb-1">
           <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-400 flex-shrink-0">
             {user?.name?.[0]?.toUpperCase() ?? "U"}
           </div>
-          <div className="min-w-0">
+          <div className="hidden sm:block min-w-0">
             <div className="text-xs font-medium text-foreground truncate">{user?.name ?? "User"}</div>
             <div className="text-[10px] text-muted-foreground truncate">{user?.email ?? ""}</div>
           </div>
         </div>
         <button
           onClick={logout}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
+          title="Sign out"
+          className="w-full flex justify-center sm:justify-start items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
         >
           <LogOut size={14} />
-          Sign out
+          <span className="hidden sm:inline">Sign out</span>
         </button>
       </div>
     </aside>

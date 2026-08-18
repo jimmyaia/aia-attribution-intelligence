@@ -12,6 +12,7 @@ import Billing from "./pages/Billing";
 import Onboarding from "./pages/Onboarding";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import Admin from "./pages/Admin";
 import { useAuth } from "./_core/hooks/useAuth";
 import { trpc } from "./lib/trpc";
 import { useEffect } from "react";
@@ -52,6 +53,7 @@ function Router() {
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/dashboard/integrations" component={Integrations} />
         <Route path="/dashboard/billing" component={Billing} />
+        <Route path="/admin" component={Admin} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

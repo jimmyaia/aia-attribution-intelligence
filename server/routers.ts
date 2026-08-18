@@ -16,6 +16,7 @@ import {
   users,
 } from "../drizzle/schema";
 import { PLANS } from "./products";
+import { adminRouter } from "./adminRouter";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
   apiVersion: "2026-06-24.dahlia",
@@ -50,6 +51,7 @@ async function getOrCreateStripeCustomer(
 // ─── App Router ───────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
+  admin: adminRouter,
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   auth: router({

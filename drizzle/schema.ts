@@ -21,6 +21,11 @@ export const users = mysqlTable("users", {
   phone: varchar("phone", { length: 32 }),
   website: varchar("website", { length: 512 }),
   profileComplete: boolean("profileComplete").default(false).notNull(),
+  onboardingStatus: varchar("onboardingStatus", { length: 32 })
+    .default("not_started")
+    .notNull(),
+  onboardingNotes: text("onboardingNotes"),
+  onboardingUpdatedAt: timestamp("onboardingUpdatedAt"),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

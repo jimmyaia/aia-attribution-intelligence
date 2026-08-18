@@ -58,8 +58,19 @@
 
 ## Phase 10: Date Range Picker + Admin Panel
 - [x] Add date range picker to dashboard header (Last 7/30 days, custom range)
-- [ ] Admin panel: list all registered agencies + subscription status
-- [ ] Multi-tenant data isolation: users only see their own data
+- [x] Admin panel: list all registered agencies + subscription status
+- [ ] Replace shared dashboard mock reporting with tenant-scoped data or a per-agency no-data state
+
+## Phase 12: Best-in-Class Admin Area
+- [x] Enforce admin-only access for all admin routes and procedures
+- [x] Build an admin overview with agency, subscription, and integration-status summaries
+- [x] Build a searchable agency directory with onboarding and connection status
+- [x] Build an agency detail view with customer profile, billing, and integration context
+- [x] Build a guided manual onboarding flow to create agency accounts and temporary credentials
+- [x] Add safe admin actions for password reset and onboarding-state management
+- [x] Add admin authorization and onboarding workflow regression tests
+- [x] Verify desktop and mobile admin routes
+- [x] Save the verified admin-area implementation in a checkpoint
 
 ## Phase 11: Live Data Integration
 - [ ] Replace mock campaign data with Google Ads API calls
