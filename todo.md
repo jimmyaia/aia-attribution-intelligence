@@ -116,6 +116,7 @@
 - [x] Show the logged-in tenant’s 7-digit Customer ID in settings
 - [x] Add a secure current-password and new-password change flow
 - [ ] Complete end-to-end profile-image, password-change, and blocked-Client-View settings checks
+- [ ] Redirect unauthenticated Settings visitors to the in-app login screen
 
 ## Dashboard Layout Regression
 - [x] Fix desktop sidebar profile and navigation overlap

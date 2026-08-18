@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { Copy, KeyRound, Loader2, ShieldCheck, Upload, UserRound } from "lucide-react";
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 import { Sidebar, MobileNavigation } from "./Dashboard";
 import { SupportViewBanner } from "@/components/SupportViewBanner";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -13,6 +14,7 @@ const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 export default function Settings() {
   const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const profile = trpc.user.getProfile.useQuery(undefined, { enabled: Boolean(user) });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -70,6 +72,10 @@ export default function Settings() {
       toast.error("Unable to copy Customer ID");
     }
   };
+
+  useEffect(() => {
+    if (!loading && !user) setLocation("/login");
+  }, [loading, setLocation, user]);
 
   if (loading) return <div className="min-h-screen bg-background" />;
   if (!user) return <div className="min-h-screen bg-background" />;
