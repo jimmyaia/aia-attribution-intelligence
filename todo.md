@@ -37,8 +37,8 @@
 - [ ] Cache API responses to avoid rate limits
 
 ## Phase 7: Checkpoint + Delivery
-- [ ] Save checkpoint
-- [ ] Deliver to user with summary
+- [x] Save checkpoint
+- [x] Deliver to user with summary
 
 ## Phase 8: Registration & Login Flow Fix
 - [x] Add profile fields to users table: firstName, lastName, phone, website, businessName
@@ -82,6 +82,7 @@
 - [x] Create a private GitHub repository backup of the current AIA Attribution Intelligence source code
 - [x] Create a downloadable ZIP archive backup of the current project source code
 - [x] Synchronize the latest verified cleanup checkpoint to the private GitHub repository
+- [ ] Save and sync the latest Customer ID, Settings, and OAuth security work to GitHub
 
 ## Administrator Access
 - [x] Create the requested master administrator account
@@ -117,7 +118,8 @@
 - [ ] Complete end-to-end profile-image, password-change, and blocked-Client-View settings checks
 
 ## Deployment Follow-Up
-- [ ] Publish the latest checkpoint so the live domain serves the Admin Control Center route
+- [x] Publish the latest checkpoint to the live domain
+- [ ] Verify the live Admin Control Center and customer Settings routes after deployment
 
 ## Codebase Cleanup Audit
 - [x] Audit and remove clearly unused or abandoned application code, files, and routes
