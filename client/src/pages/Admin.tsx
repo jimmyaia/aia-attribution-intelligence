@@ -34,6 +34,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { Sidebar } from "./Dashboard";
+import { AgencyTeamPanel } from "@/components/AgencyTeamPanel";
 
 type OnboardingStatus = "not_started" | "invited" | "in_progress" | "ready" | "complete";
 
@@ -300,6 +301,8 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
               <div><dt className="text-xs text-muted-foreground">Plan</dt><dd className="mt-1 text-foreground">{agency.subscription.planName || "No subscription"}</dd></div>
             </dl>
           </section>
+
+          <AgencyTeamPanel agency={agency} />
         </div>
 
         <aside className="space-y-5">
@@ -383,16 +386,17 @@ function AgencyDetails({ agency, onClose }: { agency: Agency; onClose: () => voi
   );
 }
 
-function CreateAgencyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function CreateAgencyDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (open: boolean) => void; onCreated: (agencyId: number) => void }) {
   const utils = trpc.useUtils();
   const [form, setForm] = useState({ firstName: "", lastName: "", agencyName: "", email: "", phone: "", website: "", temporaryPassword: "", notes: "" });
   const setField = (field: keyof typeof form, value: string) => setForm(current => ({ ...current, [field]: value }));
   const createAgency = trpc.admin.createAgency.useMutation({
-    onSuccess: async () => {
+    onSuccess: async data => {
       await Promise.all([utils.admin.overview.invalidate(), utils.admin.listAgencies.invalidate()]);
       setForm({ firstName: "", lastName: "", agencyName: "", email: "", phone: "", website: "", temporaryPassword: "", notes: "" });
       onOpenChange(false);
-      toast.success("Agency account created and marked as invited");
+      onCreated(data.agencyId);
+      toast.success("Agency account created. Add team users from the Agency team section.");
     },
     onError: error => toast.error(error.message),
   });
@@ -535,7 +539,7 @@ export default function Admin() {
       )}
       {selectedAgencyId && selectedAgency.isLoading && <div className="flex min-w-0 flex-1 items-center justify-center"><Loader2 className="animate-spin text-blue-400" /></div>}
       {selectedAgency.error && <div className="fixed bottom-5 right-5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">Could not load agency details. <button onClick={() => { setSelectedAgencyId(null); utils.admin.getAgency.reset(); }} className="ml-2 underline">Close</button></div>}
-      <CreateAgencyDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateAgencyDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={setSelectedAgencyId} />
     </div>
   );
 }

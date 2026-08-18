@@ -8,7 +8,7 @@
 
 import type { Express, Request, Response } from "express";
 import { eq } from "drizzle-orm";
-import { getDb } from "./db";
+import { getAgencyOwnerForMember, getDb } from "./db";
 import { googleAdsConnections } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { encryptConnectionToken } from "./tokenEncryption";
@@ -39,7 +39,7 @@ export function registerGoogleAdsOAuthRoutes(app: Express) {
     }
 
     // Authenticate the current user so we can embed their ID in state
-    let user: { id: number } | null = null;
+    let user: Awaited<ReturnType<typeof sdk.authenticateRequest>> | null = null;
     try {
       user = await sdk.authenticateRequest(req);
     } catch {
@@ -47,7 +47,18 @@ export function registerGoogleAdsOAuthRoutes(app: Express) {
       return;
     }
 
-    const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString("base64url");
+    if (!user || user.agencyMemberRole !== "owner" || (user.agencyId ?? user.id) !== user.id) {
+      res.redirect(302, "/dashboard/integrations?google_error=owner_required");
+      return;
+    }
+
+    const workspaceOwner = await getAgencyOwnerForMember(user.id);
+    if (!workspaceOwner) {
+      res.redirect(302, "/dashboard/integrations?google_error=workspace_unavailable");
+      return;
+    }
+
+    const state = Buffer.from(JSON.stringify({ userId: workspaceOwner.id, ts: Date.now() })).toString("base64url");
     const callbackUrl = getCallbackUrl(req);
 
     const params = new URLSearchParams({

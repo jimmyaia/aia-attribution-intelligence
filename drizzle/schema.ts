@@ -1,6 +1,7 @@
 import {
   boolean,
   int,
+  index,
   mysqlEnum,
   mysqlTable,
   text,
@@ -18,6 +19,11 @@ export const users = mysqlTable("users", {
   customerId: varchar("customerId", { length: 7 }).unique(),
   profileImageUrl: varchar("profileImageUrl", { length: 1024 }),
   agencyName: varchar("agencyName", { length: 255 }),
+  agencyId: int("agencyId"),
+  agencyMemberRole: mysqlEnum("agencyMemberRole", ["owner", "member"])
+    .default("owner")
+    .notNull(),
+  agencyMemberActive: boolean("agencyMemberActive").default(true).notNull(),
   firstName: varchar("firstName", { length: 128 }),
   lastName: varchar("lastName", { length: 128 }),
   phone: varchar("phone", { length: 32 }),
@@ -34,7 +40,9 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+}, table => [
+  index("users_agencyId_idx").on(table.agencyId),
+]);
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

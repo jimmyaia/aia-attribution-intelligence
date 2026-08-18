@@ -7,7 +7,7 @@ import { COOKIE_NAME, SUPPORT_VIEW_COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, paymentRecoveryWriteProcedure, paymentRecoveryProcedure, protectedProcedure, publicProcedure, router, subscriptionAccessProcedure, subscriptionWriteProcedure } from "./_core/trpc";
-import { createEmailUser, createSupportViewSession, endActiveSupportViewSessionsForAdmin, endSupportViewSession, getDb, getUserByEmail, getUserById } from "./db";
+import { createEmailUser, createSupportViewSession, endActiveSupportViewSessionsForAdmin, endSupportViewSession, getAgencyOwnerForMember, getDb, getUserByEmail, getUserById } from "./db";
 import { sdk } from "./_core/sdk";
 import {
   subscriptions,
@@ -19,6 +19,7 @@ import { PLANS } from "./products";
 import { adminRouter } from "./adminRouter";
 import { getBillingAccessForUser } from "./subscriptionAccess";
 import { storagePut } from "./storage";
+import { canManageAgencyWorkspace } from "./agencyAccess";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
   apiVersion: "2026-06-24.dahlia",
@@ -59,6 +60,18 @@ function parseProfileImage(dataUrl: string) {
   }
   const extension = match[1] === "image/png" ? "png" : match[1] === "image/webp" ? "webp" : "jpg";
   return { buffer, contentType: match[1], extension };
+}
+
+async function getAgencyWorkspaceOwner(userId: number) {
+  const owner = await getAgencyOwnerForMember(userId);
+  if (!owner) throw new TRPCError({ code: "NOT_FOUND", message: "Agency workspace not found." });
+  return owner;
+}
+
+function requireAgencyOwner(member: { id: number; agencyId: number | null; agencyMemberRole: "owner" | "member" }) {
+  if (!canManageAgencyWorkspace({ agencyMemberRole: member.agencyMemberRole, agencyMemberActive: true })) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Only the agency owner can manage shared billing and integrations." });
+  }
 }
 
 // ─── App Router ───────────────────────────────────────────────────────────────
@@ -130,6 +143,12 @@ export const appRouter = router({
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "Invalid email or password.",
+          });
+        }
+        if (!user.agencyMemberActive) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This agency account has been deactivated. Contact your agency administrator.",
           });
         }
         const valid = await bcrypt.compare(input.password, user.passwordHash);
@@ -225,10 +244,12 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
+        requireAgencyOwner(ctx.user);
+        const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
         await db
           .update(users)
           .set({ agencyName: input.agencyName })
-          .where(eq(users.id, ctx.user.id));
+          .where(eq(users.id, workspaceOwner.id));
         return { success: true };
       }),
 
@@ -308,10 +329,11 @@ export const appRouter = router({
     get: paymentRecoveryProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
+      const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
       const [sub] = await db
         .select()
         .from(subscriptions)
-        .where(eq(subscriptions.userId, ctx.user.id))
+        .where(eq(subscriptions.userId, workspaceOwner.id))
         .limit(1);
       return sub ?? null;
     }),
@@ -319,10 +341,12 @@ export const appRouter = router({
     createCheckout: paymentRecoveryWriteProcedure
       .input(z.object({ origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
+        requireAgencyOwner(ctx.user);
+        const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
         const customerId = await getOrCreateStripeCustomer(
-          ctx.user.id,
-          ctx.user.email ?? "",
-          ctx.user.name
+          workspaceOwner.id,
+          workspaceOwner.email ?? "",
+          workspaceOwner.name
         );
 
         const session = await stripe.checkout.sessions.create({
@@ -343,11 +367,11 @@ export const appRouter = router({
               quantity: 1,
             },
           ],
-          client_reference_id: ctx.user.id.toString(),
+          client_reference_id: workspaceOwner.id.toString(),
           metadata: {
-            user_id: ctx.user.id.toString(),
-            customer_email: ctx.user.email ?? "",
-            customer_name: ctx.user.name ?? "",
+            user_id: workspaceOwner.id.toString(),
+            customer_email: workspaceOwner.email ?? "",
+            customer_name: workspaceOwner.name ?? "",
           },
           success_url: `${input.origin}/dashboard?checkout=success`,
           cancel_url: `${input.origin}/pricing?checkout=canceled`,
@@ -359,12 +383,14 @@ export const appRouter = router({
     createPortal: paymentRecoveryWriteProcedure
       .input(z.object({ origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
+        requireAgencyOwner(ctx.user);
+        const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         const [sub] = await db
           .select()
           .from(subscriptions)
-          .where(eq(subscriptions.userId, ctx.user.id))
+          .where(eq(subscriptions.userId, workspaceOwner.id))
           .limit(1);
 
         if (!sub?.stripeCustomerId) throw new Error("No Stripe customer found");
@@ -383,6 +409,7 @@ export const appRouter = router({
     getAuthorizeUrl: subscriptionWriteProcedure
       .input(z.object({ origin: z.string().url() }))
       .query(({ ctx, input }) => {
+        requireAgencyOwner(ctx.user);
         const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
         if (!clientId) return { url: null, configured: false };
         const state = Buffer.from(
@@ -411,6 +438,7 @@ export const appRouter = router({
     getConnection: subscriptionAccessProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
+      const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
       const [conn] = await db
         .select({
           id: googleAdsConnections.id,
@@ -421,7 +449,7 @@ export const appRouter = router({
           connectedAt: googleAdsConnections.connectedAt,
         })
         .from(googleAdsConnections)
-        .where(eq(googleAdsConnections.userId, ctx.user.id))
+        .where(eq(googleAdsConnections.userId, workspaceOwner.id))
         .limit(1);
       return conn ?? null;
     }),
@@ -429,6 +457,8 @@ export const appRouter = router({
     disconnect: subscriptionWriteProcedure.mutation(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
+      requireAgencyOwner(ctx.user);
+      const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
       await db
         .update(googleAdsConnections)
         .set({
@@ -439,7 +469,7 @@ export const appRouter = router({
           googleAccountName: null,
           googleEmail: null,
         })
-        .where(eq(googleAdsConnections.userId, ctx.user.id));
+        .where(eq(googleAdsConnections.userId, workspaceOwner.id));
       return { success: true };
     }),
   }),
@@ -449,6 +479,7 @@ export const appRouter = router({
     getConnection: subscriptionAccessProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
+      const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
       const [conn] = await db
         .select({
           id: ghlConnections.id,
@@ -458,7 +489,7 @@ export const appRouter = router({
           connectedAt: ghlConnections.connectedAt,
         })
         .from(ghlConnections)
-        .where(eq(ghlConnections.userId, ctx.user.id))
+        .where(eq(ghlConnections.userId, workspaceOwner.id))
         .limit(1);
       return conn ?? null;
     }),
@@ -473,6 +504,8 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
+        requireAgencyOwner(ctx.user);
+        const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
 
         let locationName = "GoHighLevel Account";
         let locationId = input.locationId ?? "";
@@ -496,7 +529,7 @@ export const appRouter = router({
         const [existing] = await db
           .select({ id: ghlConnections.id })
           .from(ghlConnections)
-          .where(eq(ghlConnections.userId, ctx.user.id))
+          .where(eq(ghlConnections.userId, workspaceOwner.id))
           .limit(1);
 
         if (existing) {
@@ -509,10 +542,10 @@ export const appRouter = router({
               isConnected: true,
               connectedAt: new Date(),
             })
-            .where(eq(ghlConnections.userId, ctx.user.id));
+            .where(eq(ghlConnections.userId, workspaceOwner.id));
         } else {
           await db.insert(ghlConnections).values({
-            userId: ctx.user.id,
+            userId: workspaceOwner.id,
             apiKey: input.apiKey,
             locationId,
             locationName,
@@ -527,10 +560,12 @@ export const appRouter = router({
     disconnect: subscriptionWriteProcedure.mutation(async ({ ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
+      requireAgencyOwner(ctx.user);
+      const workspaceOwner = await getAgencyWorkspaceOwner(ctx.user.id);
       await db
         .update(ghlConnections)
         .set({ isConnected: false, apiKey: null })
-        .where(eq(ghlConnections.userId, ctx.user.id));
+        .where(eq(ghlConnections.userId, workspaceOwner.id));
       return { success: true };
     }),
   }),

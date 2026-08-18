@@ -385,6 +385,14 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
+    if (!user.agencyId) {
+      user = await db.ensureAgencyMembership(user.id);
+    }
+
+    if (!user.agencyMemberActive) {
+      throw ForbiddenError("Agency member account is deactivated");
+    }
+
     if (!user.customerId) {
       await db.assignCustomerId(user.id);
       user = await db.getUserById(user.id);

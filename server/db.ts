@@ -118,6 +118,8 @@ export async function createEmailUser(data: {
   phone?: string;
   website?: string;
   agencyName?: string;
+  agencyId?: number;
+  agencyMemberRole?: "owner" | "member";
 }) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
@@ -133,12 +135,46 @@ export async function createEmailUser(data: {
     name,
     loginMethod: "email",
     profileComplete: true,
+    agencyId: data.agencyId ?? null,
+    agencyMemberRole: data.agencyMemberRole ?? "owner",
+    agencyMemberActive: true,
     lastSignedIn: new Date(),
   });
   const created = await getUserByEmail(data.email);
   if (!created) throw new Error("Failed to create user");
+  const workspaceOwnerId = data.agencyId ?? created.id;
+  await db
+    .update(users)
+    .set({ agencyId: workspaceOwnerId })
+    .where(eq(users.id, created.id));
   await assignCustomerId(created.id);
   return (await getUserById(created.id)) ?? created;
+}
+
+export async function ensureAgencyMembership(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const user = await getUserById(userId);
+  if (!user) throw new Error("User not found");
+  if (user.agencyId) return user;
+
+  await db
+    .update(users)
+    .set({ agencyId: user.id, agencyMemberRole: "owner", agencyMemberActive: true })
+    .where(eq(users.id, user.id));
+  return (await getUserById(user.id)) ?? user;
+}
+
+export async function getAgencyOwnerForMember(userId: number) {
+  const user = await getUserById(userId);
+  if (!user) return undefined;
+  return getUserById(user.agencyId ?? user.id);
+}
+
+export async function listAgencyMembers(agencyId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  return db.select().from(users).where(eq(users.agencyId, agencyId));
 }
 
 export function generateCustomerId() {

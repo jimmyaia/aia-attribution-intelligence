@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Subscription, User } from "../drizzle/schema";
 import { subscriptions } from "../drizzle/schema";
-import { getDb } from "./db";
+import { getAgencyOwnerForMember, getDb } from "./db";
 
 export const PAYMENT_GRACE_PERIOD_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -65,11 +65,20 @@ export function evaluateBillingAccess(
 export async function getBillingAccessForUser(user: User, now = new Date()) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  const workspaceOwner = await getAgencyOwnerForMember(user.id);
+  if (!workspaceOwner) throw new Error("Agency workspace unavailable");
   const [subscription] = await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.userId, user.id))
+    .where(eq(subscriptions.userId, workspaceOwner.id))
     .limit(1);
 
-  return evaluateBillingAccess(user, subscription, now);
+  return evaluateBillingAccess(
+    {
+      role: user.role,
+      billingAccessOverrideUntil: workspaceOwner.billingAccessOverrideUntil,
+    },
+    subscription,
+    now,
+  );
 }

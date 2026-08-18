@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -8,7 +8,7 @@ import {
   subscriptions,
   users,
 } from "../drizzle/schema";
-import { createEmailUser, getDb, getUserByEmail, getUserById } from "./db";
+import { createEmailUser, getDb, getUserByEmail, getUserById, listAgencyMembers } from "./db";
 import { adminProcedure, router } from "./_core/trpc";
 
 export const ONBOARDING_STATUSES = [
@@ -147,6 +147,7 @@ async function loadAgencies() {
     .leftJoin(subscriptions, eq(subscriptions.userId, users.id))
     .leftJoin(googleAdsConnections, eq(googleAdsConnections.userId, users.id))
     .leftJoin(ghlConnections, eq(ghlConnections.userId, users.id))
+    .where(and(eq(users.agencyMemberRole, "owner"), eq(users.agencyId, users.id)))
     .orderBy(desc(users.createdAt));
 
   return normalizeAgencyRows(rows);
@@ -304,6 +305,104 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       await db.update(users).set({ billingAccessOverrideUntil: null }).where(eq(users.id, input.userId));
+      return { success: true };
+    }),
+
+  listAgencyTeam: adminProcedure
+    .input(z.object({ agencyId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const agency = await getUserById(input.agencyId);
+      if (!agency || agency.agencyMemberRole !== "owner" || (agency.agencyId ?? agency.id) !== agency.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Agency not found" });
+      }
+      const members = await listAgencyMembers(agency.id);
+      return members
+        .sort((a, b) => (a.agencyMemberRole === "owner" ? -1 : b.agencyMemberRole === "owner" ? 1 : a.createdAt.getTime() - b.createdAt.getTime()))
+        .map(member => ({
+          id: member.id,
+          customerId: member.customerId,
+          name: member.name,
+          email: member.email,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          phone: member.phone,
+          agencyMemberRole: member.agencyMemberRole,
+          agencyMemberActive: member.agencyMemberActive,
+          createdAt: member.createdAt,
+          lastSignedIn: member.lastSignedIn,
+        }));
+    }),
+
+  addAgencyMember: adminProcedure
+    .input(
+      z.object({
+        agencyId: z.number().int().positive(),
+        firstName: z.string().trim().min(1).max(128),
+        lastName: z.string().trim().min(1).max(128),
+        email: z.string().trim().email().max(320),
+        phone: z.string().trim().max(32).optional(),
+        temporaryPassword: z.string().min(8).max(128),
+        memberRole: z.enum(["member", "owner"]).default("member"),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const agency = await getUserById(input.agencyId);
+      if (!agency || agency.agencyMemberRole !== "owner" || (agency.agencyId ?? agency.id) !== agency.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Agency not found" });
+      }
+      const existing = await getUserByEmail(input.email);
+      if (existing) {
+        throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+      }
+      const passwordHash = await bcrypt.hash(input.temporaryPassword, 12);
+      const member = await createEmailUser({
+        email: input.email,
+        passwordHash,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone || undefined,
+        agencyName: agency.agencyName ?? undefined,
+        agencyId: agency.id,
+        agencyMemberRole: input.memberRole,
+      });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await db
+        .update(users)
+        .set({ onboardingStatus: "invited", onboardingUpdatedAt: new Date() })
+        .where(eq(users.id, member.id));
+      return { success: true, memberId: member.id, customerId: member.customerId };
+    }),
+
+  updateAgencyMember: adminProcedure
+    .input(
+      z.object({
+        agencyId: z.number().int().positive(),
+        memberId: z.number().int().positive(),
+        agencyMemberActive: z.boolean().optional(),
+        memberRole: z.enum(["member", "owner"]).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const member = await getUserById(input.memberId);
+      if (!member || member.agencyId !== input.agencyId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Agency member not found" });
+      }
+      if (member.id === input.agencyId && input.agencyMemberActive === false) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "The agency owner cannot be deactivated." });
+      }
+      if (member.role === "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Platform administrator access cannot be changed here." });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await db
+        .update(users)
+        .set({
+          ...(input.agencyMemberActive === undefined ? {} : { agencyMemberActive: input.agencyMemberActive }),
+          ...(input.memberRole === undefined ? {} : { agencyMemberRole: input.memberRole }),
+        })
+        .where(eq(users.id, member.id));
       return { success: true };
     }),
 });
