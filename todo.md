@@ -94,6 +94,7 @@
 - [x] Create a downloadable ZIP archive backup of the current project source code
 - [x] Synchronize the latest verified cleanup checkpoint to the private GitHub repository
 - [x] Save and sync the latest Customer ID, Settings, and OAuth security work to GitHub
+- [ ] Save and sync the latest multi-user agency development work to GitHub
 
 ## Administrator Access
 - [x] Create the requested master administrator account
